@@ -7,6 +7,7 @@ __pycache__/
 .Python
 *.egg-info/
 dist/
+build/
 
 # Conda environment
 piper_control_env/
