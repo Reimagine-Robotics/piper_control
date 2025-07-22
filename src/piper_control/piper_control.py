@@ -231,12 +231,6 @@ class MitJointPositionController(JointPositionController):
     for ji, pos in enumerate(target):
       joint_error = np.abs(cur_joints[ji] - pos)
 
-      # Scale the p-gain as a function of the error. When far away, have a lower
-      # gain than when closer to the target. This has the beneficit of the arm
-      # being less jerky on initial movement when the target is far away.
-      kp = np.clip(1.5 / (joint_error + 0.0001), 0.75, kp_gains[ji])
-      kd = kd_gains[ji]
-
       # Clip the position to limits so that we don't send invalid commands.
       min_rad = pi.JOINT_LIMITS_RAD["min"][ji]
       max_rad = pi.JOINT_LIMITS_RAD["max"][ji]
@@ -245,7 +239,7 @@ class MitJointPositionController(JointPositionController):
       if self._joint_flip_map:
         pos = -pos if self._joint_flip_map[ji] else pos
 
-      self._piper.command_joint_position_mit(ji, pos, kp, kd)
+      self._piper.command_joint_position_mit(ji, pos, kp_gains[ji], kd_gains[ji])
 
   def relax_joints(self, timeout: float) -> None:
     """Relaxes joints, using MIT mode, over a number of seconds.
