@@ -1,7 +1,7 @@
 [project]
 name = "piper_control"
-version = "0.1.0"
-description = "A thin wrapper around piper_sdk for controlling AgileX Piper arms."
+version = "1.0.0"
+description = "A wrapper around piper_sdk for controlling AgileX Piper arms."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"

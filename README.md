@@ -52,14 +52,20 @@ print(piper_connect.active_ports())
 Then control the robot:
 
 ```python
-from piper_control import piper_control
+from piper_control import piper_interface
+from piper_control import piper_init
 
-robot = piper_control.PiperControl(can_port="can0")
+robot = piper_interface.PiperInterface(can_port="can0")
 
 # Resets the robot and enables the motors and motion controller for the arm.
 # This call is necessary to be able to both query state and send commands to the
 # robot.
-robot.reset()
+piper_init.reset_arm(
+    robot,
+    arm_controller=piper_interface.ArmController.POSITION_VELOCITY,
+    move_mode=piper_interface.MoveMode.JOINT,
+)
+piper_init.reset_gripper(robot)
 
 # See where the robot is now.
 joint_angles = robot.get_joint_positions()
@@ -69,7 +75,7 @@ print(joint_angles)
 joint_angles = robot.get_joint_positions()
 joint_angles[-2] -= 0.1
 print(f"Setting joint angles to {joint_angles}")
-robot.set_joint_positions(joint_angles)
+robot.command_joint_positions(joint_angles)
 ```
 
 See the [tutorial.ipynb][tutorial] for a longer walkthrough.
@@ -89,16 +95,17 @@ the released versions of the project.
 
 ## Troubleshooting / FAQ
 
-### Is my PiperControl working?
+### Is my PiperInterface working?
 
 This snippet is a good check for whether things are working:
 
 ```python
-from piper_control import piper_control
+from piper_control import piper_interface
+from piper_control import piper_init
 
-robot = piper_control.PiperControl(can_port="can0")
+robot = piper_interface.PiperInterface(can_port="can0")
 
-robot.enable()
+piper_init.reset_arm(robot)
 print(robot.get_joint_positions())
 print(robot.get_joint_velocities())
 print(robot.get_joint_efforts())
@@ -133,18 +140,14 @@ can0 bus opened successfully.
 Run through these steps:
 
 ```python
-# Assume you already have the PiperControl object.
-piper = piper_control.PiperControl("can0")
+# Assume you already have the PipeInterface object.
+robot = piper_interface.PiperInterface(can_port="can0")
 
-# Enable, reset, then re-enable the robot.
-piper.enable()
-time.sleep(0.5)
-piper.reset()
-time.sleep(0.5)
-piper.enable()
+# Reset again.
+piper_init.reset_arm(robot)
 ```
 
-And after that, calling `piper.get_joint_positions()` should return non-zero
+And after that, calling `robot.get_joint_positions()` should return non-zero
 values. If it doesn't, then double-check the CAN connection. See
 [this section](#canexceptionscanerror-errors).
 
@@ -167,7 +170,9 @@ it:
     cable. The CAN adapter that ships with the Piper is finnicky and sensitive
     to the USB cable used.
 
-1.  Still doesn't work? Replace the cable.
+    Be sure to call `piper_init.reset()` on the robot after starting it again.
+
+2.  Still doesn't work?
 
     You can check whether the cable itself is working by making sure the CAN
     adapter is visible:
@@ -180,7 +185,7 @@ it:
 
     As mentioned above, the CAN adapter is sensitive to this piece.
 
-1.  Still not working? Make sure the CAN interface is set up correctly.
+3.  Still not working? Make sure the CAN interface is set up correctly.
 
     Some things to try:
 
@@ -230,7 +235,7 @@ it:
     sudo ip link set can0 up
     ```
 
-1.  Still not working? Likely one of the other components are not working.
+4.  Still not working? Likely one of the other components are not working.
     Make sure the high-low cables connected to your CAN adapter are inserted
     properly. This is the most common failure mode we've seen. In particular,
     ensure that the wire ends are wedged __at the top__ of the hole, not the
