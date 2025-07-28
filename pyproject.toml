@@ -1,6 +1,6 @@
 [project]
 name = "piper_control"
-version = "1.0.0"
+dynamic = ["version"]
 description = "A wrapper around piper_sdk for controlling AgileX Piper arms."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -18,8 +18,9 @@ dependencies = [
 Repository = "https://github.com/Reimagine-Robotics/piper_control"
 
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["setuptools>=61.0.0", "wheel"]
+backend-path = ["_custom_build_backend"]
+build-backend = "backend"
 
 [tool.setuptools.packages.find]
 where = ["src"]
