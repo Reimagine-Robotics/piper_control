@@ -1,6 +1,7 @@
 """Simple wrapper for piper_sdk."""
 
 from enum import IntEnum
+from packaging import version as packaging_version
 from typing import Literal, Sequence, TypeGuard
 
 import piper_sdk
@@ -637,3 +638,34 @@ class PiperInterface:
       effort_int = round(effort * 1e3)
 
     self.piper.GripperCtrl(position_int, effort_int, GripperCode.ENABLE, 0)
+
+
+  def get_piper_interface_name(self) -> str:
+    """Returns the name of the Piper interface."""
+    return self.piper.GetCurrentInterfaceVersion().name
+
+  def get_piper_protocol_version(self) -> str:
+    """Returns the protocol version of the Piper interface."""
+    return self.piper.GetCurrentInterfaceVersion().protocol_version
+
+  def get_piper_sdk_version(self) -> str:
+    """Returns the version of the Piper SDK."""
+    version_str = self.piper.GetCurrentSDKVersion().value
+    try:
+      version = packaging_version.parse(version_str)
+      return str(version)
+    except packaging_version.InvalidVersion:
+      # Just return the raw string if parsing fails
+      return version_str
+
+  def get_piper_firmware_version(self) -> str:
+    """Returns the firmware version of the Piper robot."""
+    version_str = self.piper.GetPiperFirmwareVersion()
+    try:
+      version = packaging_version.parse(
+          version_str[version_str.index("V"):].strip()
+      )
+      return str(version)
+    except packaging_version.InvalidVersion:
+      # Just return the raw string if parsing fails
+      return version_str

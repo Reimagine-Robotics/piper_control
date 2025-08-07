@@ -9,6 +9,7 @@ Piper robot. They provide two main benefits:
 
 import abc
 import time
+from packaging import version as packaging_version
 from typing import Sequence
 
 import numpy as np
@@ -23,10 +24,13 @@ DEFAULT_GRIPPER_EFFORT = 1.0  # Ostensibly in Nm.
 # Control rate in Hz. Frequency at which to send joint commands to the robot.
 _CONTROL_RATE = 200.0
 
-# For some reason in MIT mode, some of the joints behave in a "reverse" manner,
-# whether for direct torque commands or for setting a desired position
-# reference. This mapping tells us which joints are 'flipped'.
-_MIT_JOINT_FLIP = [True, True, False, True, False, True]
+# For some reason, in older versions of the Piper firmware, in MIT mode, some of
+# the joints behave in a "reverse" manner, whether for direct torque commands or
+# for setting a desired position reference. This mapping tells us which joints
+# are 'flipped'.
+_MIT_FLIP_FIX_VERSION = packaging_version.Version("1.7-3")
+_PRE_V1_7_3_MIT_JOINT_FLIP = [True, True, False, True, False, True]
+_POST_V1_7_3_MIT_JOINT_FLIP = [False, False, False, False, False, False]
 
 # These limits make sense only for upright robot arm.
 _MIT_TORQUE_LIMITS = [0.5, 3.0, 2.0, 2.0, 2.0, 0.5]
@@ -190,7 +194,17 @@ class MitJointPositionController(JointPositionController):
       raise ValueError(f"KD gains outside valid range: {self._kd_gains}")
 
     self._rest_position = rest_position
-    self._joint_flip_map = _MIT_JOINT_FLIP
+    current_firmware = self.piper.get_piper_firmware_version()
+    try:
+      firmware_version = packaging_version.parse(current_firmware)
+      if firmware_version < _MIT_FLIP_FIX_VERSION:
+        self._joint_flip_map = _PRE_V1_7_3_MIT_JOINT_FLIP
+      else:
+        self._joint_flip_map = _POST_V1_7_3_MIT_JOINT_FLIP
+    except packaging_version.InvalidVersion as e:
+      raise ValueError(
+          f"Invalid firmware version string: {current_firmware}"
+      ) from e
 
   def start(self) -> None:
     self.piper.set_arm_mode(
