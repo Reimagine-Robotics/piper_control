@@ -26,10 +26,10 @@ _CONTROL_RATE = 200.0
 # For some reason in MIT mode, some of the joints behave in a "reverse" manner,
 # whether for direct torque commands or for setting a desired position
 # reference. This mapping tells us which joints are 'flipped'.
-_MIT_JOINT_FLIP = [True, True, False, True, False, True]
+_MIT_JOINT_FLIP = [False, False, False, False, False, False]
 
 # These limits make sense only for upright robot arm.
-_MIT_TORQUE_LIMITS = [0.5, 3.0, 2.0, 2.0, 2.0, 0.5]
+_MIT_TORQUE_LIMITS = [0.5, 5.0, 4.0, 4.0, 4.0, 2.5]
 
 # Allowed gains range allowed for the Mit controller.
 _MAX_KP_GAIN = 100.0
