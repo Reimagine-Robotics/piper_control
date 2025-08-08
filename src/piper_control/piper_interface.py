@@ -1,10 +1,11 @@
 """Simple wrapper for piper_sdk."""
 
+import time
 from enum import IntEnum
-from packaging import version as packaging_version
 from typing import Literal, Sequence, TypeGuard
 
 import piper_sdk
+from packaging import version as packaging_version
 
 # Global constants
 DEG_TO_RAD = 3.1415926 / 180.0
@@ -639,14 +640,13 @@ class PiperInterface:
 
     self.piper.GripperCtrl(position_int, effort_int, GripperCode.ENABLE, 0)
 
-
   def get_piper_interface_name(self) -> str:
     """Returns the name of the Piper interface."""
     return self.piper.GetCurrentInterfaceVersion().name
 
   def get_piper_protocol_version(self) -> str:
     """Returns the protocol version of the Piper interface."""
-    return self.piper.GetCurrentInterfaceVersion().protocol_version
+    return self.piper.GetCurrentInterfaceVersion().name
 
   def get_piper_sdk_version(self) -> str:
     """Returns the version of the Piper SDK."""
@@ -660,10 +660,19 @@ class PiperInterface:
 
   def get_piper_firmware_version(self) -> str:
     """Returns the firmware version of the Piper robot."""
+    timeout = 5.0  # seconds
+    start_time = time.time()
     version_str = self.piper.GetPiperFirmwareVersion()
+    while time.time() - start_time < timeout:
+      if isinstance(version_str, str):
+        break
+      time.sleep(0.5)  # Wait a bit before retrying
+      version_str = self.piper.GetPiperFirmwareVersion()
+    if not isinstance(version_str, str):
+      raise RuntimeError("Failed to get firmware version within timeout.")
     try:
       version = packaging_version.parse(
-          version_str[version_str.index("V"):].strip()
+          version_str[version_str.index("V") :].strip()
       )
       return str(version)
     except packaging_version.InvalidVersion:
