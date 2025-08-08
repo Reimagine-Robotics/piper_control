@@ -10,8 +10,9 @@ authors = [
     { name="Reimagine Robotics", email="info@reimaginerobotics.ai" },
 ]
 dependencies = [
-    "piper_sdk>=0.2.19",
     "numpy<2",
+    "packaging",
+    "piper_sdk>=0.2.19",
 ]
 
 [project.urls]
