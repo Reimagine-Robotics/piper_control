@@ -16,7 +16,6 @@ import numpy as np
 
 from piper_control import piper_interface as pi
 
-
 REST_POSITION = (0.0, 0.0, 0.0, 0.02, 0.5, 0.0)
 
 DEFAULT_GRIPPER_EFFORT = 1.0  # Ostensibly in Nm.
@@ -33,7 +32,8 @@ _PRE_V1_7_3_MIT_JOINT_FLIP = [True, True, False, True, False, True]
 _POST_V1_7_3_MIT_JOINT_FLIP = [False, False, False, False, False, False]
 
 # These limits make sense only for upright robot arm.
-_MIT_TORQUE_LIMITS = [0.5, 3.0, 2.0, 2.0, 2.0, 0.5]
+# _MIT_TORQUE_LIMITS = [0.5, 3.0, 2.0, 2.0, 2.0, 0.5]
+_MIT_TORQUE_LIMITS = [3.0, 3.0, 3.0, 3.0, 3.0, 3.0]
 
 # Allowed gains range allowed for the Mit controller.
 _MAX_KP_GAIN = 100.0
