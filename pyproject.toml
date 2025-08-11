@@ -25,3 +25,6 @@ build-backend = "backend"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+piper_control = ["py.typed"]
