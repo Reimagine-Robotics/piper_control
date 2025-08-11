@@ -8,15 +8,78 @@ Piper robot. They provide two main benefits:
 """
 
 import abc
+import dataclasses
 import time
-from packaging import version as packaging_version
 from typing import Sequence
 
 import numpy as np
+from packaging import version as packaging_version
 
 from piper_control import piper_interface as pi
 
-REST_POSITION = (0.0, 0.0, 0.0, 0.02, 0.5, 0.0)
+
+@dataclasses.dataclass(frozen=True)
+class ArmOrientation:
+  """Represents an arm mounting orientation with associated data."""
+
+  name: str
+  rest_position: tuple[float, ...]  # Joint angles in radians
+  mounting_quaternion: tuple[float, float, float, float]  # [w, i, j, k]
+
+
+@dataclasses.dataclass(frozen=True)
+class ArmOrientations:
+  """Registry of standard arm orientations.
+
+  Coordinate system: Default upright arm has +x forward, +y left, +z up.
+  """
+
+  upright: ArmOrientation = ArmOrientation(
+      name="upright",
+      rest_position=(0.0, 0.0, 0.0, 0.02, 0.5, 0.0),
+      mounting_quaternion=(1.0, 0.0, 0.0, 0.0),  # Identity - no rotation
+  )
+
+  left: ArmOrientation = ArmOrientation(
+      name="left",
+      rest_position=(1.71, 2.96, -2.65, 1.41, -0.081, -0.190),
+      mounting_quaternion=(0.7071068, -0.7071068, 0.0, 0.0),  # -90° around X
+  )
+
+  right: ArmOrientation = ArmOrientation(
+      name="right",
+      rest_position=(-1.66, 2.91, -2.74, 0.0545, -0.271, 0.0979),
+      mounting_quaternion=(0.7071068, 0.7071068, 0.0, 0.0),  # +90° around X
+  )
+
+  @classmethod
+  def from_string(cls, orientation_name: str) -> ArmOrientation:
+    """Get ArmOrientation instance from string name.
+
+    Args:
+      orientation_name: Name of the orientation ('upright', 'left', 'right')
+
+    Returns:
+      ArmOrientation instance
+
+    Raises:
+      ValueError: If orientation_name is not recognized
+    """
+    orientation_name = orientation_name.lower()
+    for orientation in cls.__dict__.values():
+      if (
+          isinstance(orientation, ArmOrientation)
+          and orientation.name.lower() == orientation_name
+      ):
+        return orientation
+
+    available = [
+        o.name for o in cls.__dict__.values() if isinstance(o, ArmOrientation)
+    ]
+    raise ValueError(
+        f"Unknown arm orientation: {orientation_name}. Available: {available}"
+    )
+
 
 DEFAULT_GRIPPER_EFFORT = 1.0  # Ostensibly in Nm.
 
@@ -120,7 +183,9 @@ class BuiltinJointPositionController(JointPositionController):
   def __init__(
       self,
       piper: pi.PiperInterface,
-      rest_position: Sequence[float] | None = REST_POSITION,
+      rest_position: (
+          Sequence[float] | None
+      ) = ArmOrientations.upright.rest_position,
   ):
     """Controller constructor
 
@@ -160,7 +225,9 @@ class MitJointPositionController(JointPositionController):
       piper: pi.PiperInterface,
       kp_gains: Sequence[float] | float,
       kd_gains: Sequence[float] | float,
-      rest_position: Sequence[float] | None = REST_POSITION,
+      rest_position: (
+          Sequence[float] | None
+      ) = ArmOrientations.upright.rest_position,
   ):
     """Controller constructor
 
