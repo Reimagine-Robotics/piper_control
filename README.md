@@ -93,6 +93,29 @@ pip install .
 NOTE: The changes on the `main` branch are in beta and may be less stable than
 the released versions of the project.
 
+## Generating udev rules for CAN adapters
+
+To avoid needing to run `sudo` to set up the CAN interface, you can create a udev rule to the bitrate and desired name for your CAN adapter.
+
+### Usage
+
+1. Plug in your CAN adapter
+2. Run the script:
+   ```bash
+   sudo ./scripts/generate_udev_rule.bash -i can0 -b 1000000
+   # Or
+   sudo ./scripts/generate_udev_rule.bash -i can0 -n myrobot -b 1000000
+   ```
+3. Unplug and replug the adapter to test
+
+### Test
+
+```bash
+ip link show myrobot
+```
+
+That's it!
+
 ## Troubleshooting / FAQ
 
 ### Is my PiperInterface working?
