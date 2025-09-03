@@ -160,6 +160,17 @@ class ArmInstallationPos(IntEnum):
   # the green LED is below the cable socket.
   RIGHT = 0x03
 
+  def from_string(pos: str) -> "ArmInstallationPos":
+      match pos.lower():
+          case "upright":
+              return ArmInstallationPos.UPRIGHT
+          case "left":
+              return ArmInstallationPos.LEFT
+          case "right":
+              return ArmInstallationPos.RIGHT
+          case _:
+              raise ValueError(f"Invalid installation position: {pos}")
+
 
 JOINT_LIMITS_RAD = {
     "min": [-2.6179, 0.0, -2.967, -1.745, -1.22, -2.09439],
