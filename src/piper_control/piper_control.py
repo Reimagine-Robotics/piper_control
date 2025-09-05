@@ -28,7 +28,7 @@ _CONTROL_RATE = 200.0
 # the joints behave in a "reverse" manner, whether for direct torque commands or
 # for setting a desired position reference. This mapping tells us which joints
 # are 'flipped'.
-_MIT_FLIP_FIX_VERSION = packaging_version.Version("1.7-3")
+_MIT_FLIP_FIX_VERSION = packaging_version.Version("1.6.post8")
 _PRE_V1_7_3_MIT_JOINT_FLIP = [True, True, False, True, False, True]
 _POST_V1_7_3_MIT_JOINT_FLIP = [False, False, False, False, False, False]
 
@@ -197,7 +197,7 @@ class MitJointPositionController(JointPositionController):
     current_firmware = self.piper.get_piper_firmware_version()
     try:
       firmware_version = packaging_version.parse(current_firmware)
-      if firmware_version < _MIT_FLIP_FIX_VERSION:
+      if firmware_version <= _MIT_FLIP_FIX_VERSION:
         self._joint_flip_map = _PRE_V1_7_3_MIT_JOINT_FLIP
       else:
         self._joint_flip_map = _POST_V1_7_3_MIT_JOINT_FLIP
