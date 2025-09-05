@@ -121,7 +121,7 @@ That's it!
 To lint the codebase, run:
 
 ```bash
-uv run pre-commit
+uv run pre-commit run -a
 ```
 
 ## Troubleshooting / FAQ
