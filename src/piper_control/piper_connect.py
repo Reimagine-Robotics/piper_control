@@ -40,6 +40,10 @@ def activate(
   """Activate all provided ports, or auto-discover and activate all known CAN
   interfaces.
 
+  NOTE: This function is intended for Linux systems with CAN interfaces. It uses
+  `ip` and `ethtool` commands to manage CAN interfaces. Ensure you have the
+  necessary permissions to run these commands (e.g., using `sudo`).
+
   Args:
     ports: Optional list of (interface, usb_address) pairs to activate. If None,
       all available ports are used.
@@ -62,6 +66,16 @@ def activate(
       raise TimeoutError(
           f"Timed out after {timeout}s waiting for CAN devices to appear"
       )
+
+  ports = sorted(ports, key=lambda p: p[1])  # Sort by usb_addr
+
+  for idx, (iface, _) in enumerate(ports):
+    target_name = f"{default_name_prefix}{idx}"
+    current_bitrate = _get_interface_bitrate(iface)
+    if current_bitrate == default_bitrate and iface == target_name:
+      continue  # Already configured
+    _rename_and_configure(iface, target_name, default_bitrate)
+
 
 def get_can_adapter_serial(can_port: str) -> str | None:
   """Convenience method that returns the serial number of a USB CAN adapter."""
@@ -150,3 +164,36 @@ def _interface_is_up(name: str) -> bool:
     return "state UP" in output
   except subprocess.CalledProcessError:
     return False
+
+
+def _rename_and_configure(interface: str, target_name: str, bitrate: int):
+  subprocess.run(["sudo", "ip", "link", "set", interface, "down"], check=True)
+  subprocess.run(
+      [
+          "sudo",
+          "ip",
+          "link",
+          "set",
+          interface,
+          "type",
+          "can",
+          "bitrate",
+          str(bitrate),
+      ],
+      check=True,
+  )
+
+  if target_name != interface:
+    if _interface_exists(target_name):
+      print(
+          f"[WARN] Target name '{target_name}' already exists. Skipping rename "
+          f"of '{interface}'."
+      )
+    else:
+      subprocess.run(
+          ["sudo", "ip", "link", "set", interface, "name", target_name],
+          check=True,
+      )
+      interface = target_name
+
+  subprocess.run(["sudo", "ip", "link", "set", interface, "up"], check=True)
