@@ -126,6 +126,14 @@ ip link show myrobot
 
 That's it!
 
+## Linting
+
+To lint the codebase, run:
+
+```bash
+uv run pre-commit
+```
+
 ## Troubleshooting / FAQ
 
 ### Is my PiperInterface working?
