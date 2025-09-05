@@ -103,12 +103,22 @@ To avoid needing to run `sudo` to set up the CAN interface, you can create a ude
 2. Run the script:
    ```bash
    sudo ./scripts/generate_udev_rule.bash -i can0 -b 1000000
-   # Or
+   ```
+
+   Or name your robot (e.g. myrobot):
+
+   ```bash
    sudo ./scripts/generate_udev_rule.bash -i can0 -n myrobot -b 1000000
    ```
 3. Unplug and replug the adapter to test
 
 ### Test
+
+```bash
+ip link show can0
+```
+
+Or if you named it something else:
 
 ```bash
 ip link show myrobot
