@@ -1,5 +1,7 @@
 """Simple wrapper for piper_sdk."""
 
+from __future__ import annotations
+
 import time
 from enum import IntEnum
 from typing import Literal, Sequence, TypeGuard
@@ -159,6 +161,12 @@ class ArmInstallationPos(IntEnum):
   # Side mount right. In this orientation, the rear cable is facing backward and
   # the green LED is below the cable socket.
   RIGHT = 0x03
+
+  def from_string(pos: str) -> ArmInstallationPos:
+    try:
+      return ArmInstallationPos[pos.upper()]
+    except KeyError:
+      raise ValueError(f"Invalid installation position: {pos}")
 
 
 JOINT_LIMITS_RAD = {
