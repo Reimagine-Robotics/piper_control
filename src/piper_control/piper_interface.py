@@ -1,5 +1,7 @@
 """Simple wrapper for piper_sdk."""
 
+from __future__ import annotations
+
 import time
 from enum import IntEnum
 from typing import Literal, Sequence, TypeGuard
@@ -160,16 +162,11 @@ class ArmInstallationPos(IntEnum):
   # the green LED is below the cable socket.
   RIGHT = 0x03
 
-  def from_string(pos: str) -> "ArmInstallationPos":
-      match pos.lower():
-          case "upright":
-              return ArmInstallationPos.UPRIGHT
-          case "left":
-              return ArmInstallationPos.LEFT
-          case "right":
-              return ArmInstallationPos.RIGHT
-          case _:
-              raise ValueError(f"Invalid installation position: {pos}")
+  def from_string(pos: str) -> ArmInstallationPos:
+    try:
+      return ArmInstallationPos[pos.upper()]
+    except KeyError:
+      raise ValueError(f"Invalid installation position: {pos}")
 
 
 JOINT_LIMITS_RAD = {
