@@ -7,17 +7,17 @@ python3 scripts/simple_move.py
 import time
 
 from piper_control import (
-  piper_connect,
-  piper_control,
-  piper_init,
-  piper_interface,
+    piper_connect,
+    piper_control,
+    piper_init,
+    piper_interface,
 )
 
 
 def main():
   print(
-    "This script will move the 2nd-to-last joint of the robot arm a small "
-    "amount, using position control."
+      "This script will move the 2nd-to-last joint of the robot arm a small "
+      "amount, using position control."
   )
   input("WARNING: the robot will move. Press Enter to continue...")
 
@@ -29,10 +29,10 @@ def main():
 
   if not ports:
     raise ValueError(
-      "No ports found. Make sure the Piper is connected and turned on. "
-      "If you are having issues connecting to the piper, check our "
-      "troubleshooting guide @ "
-      "https://github.com/Reimagine-Robotics/piper_control/blob/main/README.md"
+        "No ports found. Make sure the Piper is connected and turned on. "
+        "If you are having issues connecting to the piper, check our "
+        "troubleshooting guide @ "
+        "https://github.com/Reimagine-Robotics/piper_control/blob/main/README.md"
     )
 
   robot = piper_interface.PiperInterface(can_port=ports[0])
@@ -40,9 +40,9 @@ def main():
 
   print("resetting arm")
   piper_init.reset_arm(
-    robot,
-    arm_controller=piper_interface.ArmController.MIT,
-    move_mode=piper_interface.MoveMode.MIT,
+      robot,
+      arm_controller=piper_interface.ArmController.MIT,
+      move_mode=piper_interface.MoveMode.MIT,
   )
 
   print("resetting gripper")
@@ -59,16 +59,16 @@ def main():
 
   # Move the arm joints using Mit mode controller.
   with piper_control.MitJointPositionController(
-    robot,
-    kp_gains=5.0,
-    kd_gains=0.8,
-    rest_position=piper_control.ArmOrientations.upright.rest_position,
+      robot,
+      kp_gains=5.0,
+      kd_gains=0.8,
+      rest_position=piper_control.ArmOrientations.upright.rest_position,
   ) as controller:
     print("moving to position ...")
     success = controller.move_to_position(
-      [0.5, 0.7, -0.4, 0.2, 0.3, 0.5],
-      threshold=0.01,
-      timeout=5.0,
+        [0.5, 0.7, -0.4, 0.2, 0.3, 0.5],
+        threshold=0.01,
+        timeout=5.0,
     )
     print(f"reached target: {success}")
 

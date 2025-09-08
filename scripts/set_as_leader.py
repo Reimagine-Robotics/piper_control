@@ -18,10 +18,10 @@ from piper_control import piper_control
 def main():
   parser = argparse.ArgumentParser(description="Set the robot arm as leader.")
   parser.add_argument(
-    "--can_port",
-    type=str,
-    default="can0",
-    help="The CAN port to use (default: can0).",
+      "--can_port",
+      type=str,
+      default="can0",
+      help="The CAN port to use (default: can0).",
   )
   args = parser.parse_args()
   robot = piper_control.PiperControl(args.can_port)
@@ -33,7 +33,7 @@ def main():
   robot.piper.EnableArm()
   robot.piper.MotionCtrl_2(0x01, 0x01, 100, 0x00)  # type: ignore
   robot.piper.MasterSlaveConfig(
-    linkage_config, feedback_offset, ctrl_offset, linkage_offset
+      linkage_config, feedback_offset, ctrl_offset, linkage_offset
   )
 
   # The following may have an effect on setting it to a "regular" mode, but

@@ -35,21 +35,21 @@ class ArmOrientations:
   """
 
   upright: ArmOrientation = ArmOrientation(
-    name="upright",
-    rest_position=(0.0, 0.0, 0.0, 0.02, 0.5, 0.0),
-    mounting_quaternion=(1.0, 0.0, 0.0, 0.0),  # Identity - no rotation
+      name="upright",
+      rest_position=(0.0, 0.0, 0.0, 0.02, 0.5, 0.0),
+      mounting_quaternion=(1.0, 0.0, 0.0, 0.0),  # Identity - no rotation
   )
 
   left: ArmOrientation = ArmOrientation(
-    name="left",
-    rest_position=(1.71, 2.96, -2.65, 1.41, -0.081, -0.190),
-    mounting_quaternion=(0.7071068, -0.7071068, 0.0, 0.0),  # -90° around X
+      name="left",
+      rest_position=(1.71, 2.96, -2.65, 1.41, -0.081, -0.190),
+      mounting_quaternion=(0.7071068, -0.7071068, 0.0, 0.0),  # -90° around X
   )
 
   right: ArmOrientation = ArmOrientation(
-    name="right",
-    rest_position=(-1.66, 2.91, -2.74, 0.0545, -0.271, 0.0979),
-    mounting_quaternion=(0.7071068, 0.7071068, 0.0, 0.0),  # +90° around X
+      name="right",
+      rest_position=(-1.66, 2.91, -2.74, 0.0545, -0.271, 0.0979),
+      mounting_quaternion=(0.7071068, 0.7071068, 0.0, 0.0),  # +90° around X
   )
 
   @classmethod
@@ -68,16 +68,16 @@ class ArmOrientations:
     orientation_name = orientation_name.lower()
     for orientation in cls.__dict__.values():
       if (
-        isinstance(orientation, ArmOrientation)
-        and orientation.name.lower() == orientation_name
+          isinstance(orientation, ArmOrientation)
+          and orientation.name.lower() == orientation_name
       ):
         return orientation
 
     available = [
-      o.name for o in cls.__dict__.values() if isinstance(o, ArmOrientation)
+        o.name for o in cls.__dict__.values() if isinstance(o, ArmOrientation)
     ]
     raise ValueError(
-      f"Unknown arm orientation: {orientation_name}. Available: {available}"
+        f"Unknown arm orientation: {orientation_name}. Available: {available}"
     )
 
 
@@ -105,9 +105,9 @@ _MIN_KD_GAIN = 0.0
 
 
 def _joints_within_target_threshold(
-  cur_joints: Sequence[float],
-  target: Sequence[float],
-  threshold: Sequence[float] | float = 0.001,
+    cur_joints: Sequence[float],
+    target: Sequence[float],
+    threshold: Sequence[float] | float = 0.001,
 ):
   assert len(cur_joints) == len(target)
   diffs = np.abs(np.array(cur_joints) - np.array(target))
@@ -133,10 +133,10 @@ class JointPositionController(abc.ABC):
     self.stop()
 
   def move_to_position(
-    self,
-    target: Sequence[float],
-    threshold: Sequence[float] | float = 0.001,
-    timeout: float = 1.0,
+      self,
+      target: Sequence[float],
+      threshold: Sequence[float] | float = 0.001,
+      timeout: float = 1.0,
   ) -> bool:
     """Moves the arm to a particular target pose. This is a blocking call.
 
@@ -179,11 +179,11 @@ class BuiltinJointPositionController(JointPositionController):
   """Joint position controller that uses the inbuilt position commands."""
 
   def __init__(
-    self,
-    piper: pi.PiperInterface,
-    rest_position: (
-      Sequence[float] | None
-    ) = ArmOrientations.upright.rest_position,
+      self,
+      piper: pi.PiperInterface,
+      rest_position: (
+          Sequence[float] | None
+      ) = ArmOrientations.upright.rest_position,
   ):
     """Controller constructor
 
@@ -199,8 +199,8 @@ class BuiltinJointPositionController(JointPositionController):
 
   def start(self) -> None:
     self.piper.set_arm_mode(
-      arm_controller=pi.ArmController.POSITION_VELOCITY,
-      move_mode=pi.MoveMode.JOINT,
+        arm_controller=pi.ArmController.POSITION_VELOCITY,
+        move_mode=pi.MoveMode.JOINT,
     )
 
   def stop(self) -> None:
@@ -219,13 +219,13 @@ class MitJointPositionController(JointPositionController):
   """
 
   def __init__(
-    self,
-    piper: pi.PiperInterface,
-    kp_gains: Sequence[float] | float,
-    kd_gains: Sequence[float] | float,
-    rest_position: (
-      Sequence[float] | None
-    ) = ArmOrientations.upright.rest_position,
+      self,
+      piper: pi.PiperInterface,
+      kp_gains: Sequence[float] | float,
+      kd_gains: Sequence[float] | float,
+      rest_position: (
+          Sequence[float] | None
+      ) = ArmOrientations.upright.rest_position,
   ):
     """Controller constructor
 
@@ -268,32 +268,32 @@ class MitJointPositionController(JointPositionController):
         self._joint_flip_map = _POST_V1_7_3_MIT_JOINT_FLIP
     except packaging_version.InvalidVersion as e:
       raise ValueError(
-        f"Invalid firmware version string: {current_firmware}"
+          f"Invalid firmware version string: {current_firmware}"
       ) from e
 
   def start(self) -> None:
     self.piper.set_arm_mode(
-      arm_controller=pi.ArmController.MIT,
-      move_mode=pi.MoveMode.MIT,
+        arm_controller=pi.ArmController.MIT,
+        move_mode=pi.MoveMode.MIT,
     )
 
   def stop(self) -> None:
     # Move to the rest position if one is specified.
     if self._rest_position:
       self._smoothly_move_to_position(
-        self._rest_position,
-        threshold=0.1,  # No need to be precise.
-        timeout=2.0,
+          self._rest_position,
+          threshold=0.1,  # No need to be precise.
+          timeout=2.0,
       )
 
     # Over a few seconds relax all of the joints.
     self.relax_joints(2.0)
 
   def command_joints(
-    self,
-    target: Sequence[float],
-    kp_gains: Sequence[float] | None = None,
-    kd_gains: Sequence[float] | None = None,
+      self,
+      target: Sequence[float],
+      kp_gains: Sequence[float] | None = None,
+      kd_gains: Sequence[float] | None = None,
   ) -> None:
     if not kp_gains:
       kp_gains = self._kp_gains
@@ -338,15 +338,15 @@ class MitJointPositionController(JointPositionController):
     # Maintain current position with ever decreasing gains to "relax" the arm.
     for i in range(num_steps):
       self.command_joints(
-        self._piper.get_joint_positions(),
-        kp_gains=[kp_gains[i]] * 6,
-        kd_gains=[kd_gains[i]] * 6,
+          self._piper.get_joint_positions(),
+          kp_gains=[kp_gains[i]] * 6,
+          kd_gains=[kd_gains[i]] * 6,
       )
       time.sleep(1.0 / _CONTROL_RATE)
 
   def command_torques(
-    self,
-    torques: Sequence[float],
+      self,
+      torques: Sequence[float],
   ) -> None:
     assert len(torques) == 6
 
@@ -358,10 +358,10 @@ class MitJointPositionController(JointPositionController):
       self._piper.command_joint_torque_mit(ji, torque)
 
   def _smoothly_move_to_position(
-    self,
-    target: Sequence[float],
-    threshold: Sequence[float] | float = 0.001,
-    timeout: float = 1.0,
+      self,
+      target: Sequence[float],
+      threshold: Sequence[float] | float = 0.001,
+      timeout: float = 1.0,
   ) -> bool:
     assert len(target) == 6
 
@@ -413,9 +413,9 @@ class GripperController(abc.ABC):
     self.piper.command_gripper(position=0.0)
 
   def command_position(
-    self,
-    target: float,
-    effort: float = DEFAULT_GRIPPER_EFFORT,
+      self,
+      target: float,
+      effort: float = DEFAULT_GRIPPER_EFFORT,
   ) -> None:
     target = np.clip(target, 0.0, pi.GRIPPER_ANGLE_MAX)
     self.piper.command_gripper(position=target, effort=effort)

@@ -1,6 +1,6 @@
 target-version = "py312"
-indent-width = 2
-line-length = 80
+indent-width   = 2
+line-length    = 80
 
 [lint]
 extend-select = [
@@ -19,8 +19,10 @@ extend-select = [
   "RUF",
 ]
 
-# line-length = 88
-ignore = ["E501"]
-
 [lint.pydocstyle]
 convention = "google"
+
+[lint.per-file-ignores]
+"src/piper_control/__init__.py"        = ["F401"]
+"src/piper_control/piper_control.py"   = ["RUF009"]
+"src/piper_control/piper_connect.py"   = ["E741"]
