@@ -35,3 +35,16 @@ repos:
     rev: v1.23.6
     hooks:
       - id: typos
+  - repo: local
+    hooks:
+      - id: pylint
+        name: pylint
+        entry: pylint
+        language: system
+        types: [python]
+        args:
+          [
+            "-rn", # Only display messages
+            "-sn", # Don't display the score
+            "--rcfile=.vscode/pylintrc", # Link to your config file
+          ]

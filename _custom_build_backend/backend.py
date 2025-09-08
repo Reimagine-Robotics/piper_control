@@ -15,16 +15,16 @@ import setuptools.build_meta as original_backend
 def _write_git_hash():
   try:
     git_hash = (
-        subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip()
+      subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip()
     )
   except Exception:  # pylint: disable=broad-except
     git_hash = "unknown"
 
   version_file = (
-      pathlib.Path(__file__).parent.parent
-      / "src"
-      / "piper_control"
-      / "_git_hash.py"
+    pathlib.Path(__file__).parent.parent
+    / "src"
+    / "piper_control"
+    / "_git_hash.py"
   )
   version_file.write_text(f'__git_hash__ = "{git_hash}"\n')
 
@@ -33,7 +33,7 @@ def _write_git_hash():
 def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
   _write_git_hash()
   return original_backend.build_wheel(
-      wheel_directory, config_settings, metadata_directory
+    wheel_directory, config_settings, metadata_directory
   )
 
 
@@ -45,14 +45,14 @@ def build_sdist(sdist_directory, config_settings=None):
 def prepare_metadata_for_build_wheel(metadata_directory, config_settings=None):
   _write_git_hash()
   return original_backend.prepare_metadata_for_build_wheel(
-      metadata_directory, config_settings
+    metadata_directory, config_settings
   )
 
 
 def build_editable(
-    wheel_directory, config_settings=None, metadata_directory=None
+  wheel_directory, config_settings=None, metadata_directory=None
 ):
   _write_git_hash()
   return original_backend.build_editable(
-      wheel_directory, config_settings, metadata_directory
+    wheel_directory, config_settings, metadata_directory
   )

@@ -8,20 +8,19 @@ from higher-level Python code.
 
 import subprocess
 import time
-from typing import List, Optional, Tuple
 
 # ------------------------
 # Public API
 # ------------------------
 
 
-def find_ports() -> List[Tuple[str, str]]:
+def find_ports() -> list[tuple[str, str]]:
   """Return a list of (interface, usb_address) pairs."""
   _check_dependencies()
   return _get_can_interfaces()
 
 
-def active_ports() -> List[str]:
+def active_ports() -> list[str]:
   """Return list of CAN interfaces that are currently up."""
   _check_dependencies()
   result = []
@@ -32,9 +31,9 @@ def active_ports() -> List[str]:
 
 
 def activate(
-    ports: Optional[List[Tuple[str, str]]] = None,
-    default_bitrate: int = 1000000,
-    timeout: Optional[int] = None,
+  ports: list[tuple[str, str]] | None = None,
+  default_bitrate: int = 1000000,
+  timeout: int | None = None,
 ):
   """Activate all provided ports, or auto-discover and activate all known CAN
   interfaces.
@@ -62,12 +61,12 @@ def activate(
       time.sleep(5)
     if not ports:
       raise TimeoutError(
-          f"Timed out after {timeout}s waiting for CAN devices to appear"
+        f"Timed out after {timeout}s waiting for CAN devices to appear"
       )
 
   ports = sorted(ports, key=lambda p: p[1])  # Sort by usb_addr
 
-  for idx, (iface, _) in enumerate(ports):
+  for iface, _ in ports:
     current_bitrate = _get_interface_bitrate(iface)
     if current_bitrate == default_bitrate:
       continue  # Already configured
@@ -86,7 +85,7 @@ def get_can_adapter_serial(can_port: str) -> str | None:
   if usb_port:
     serial_file = f"/sys/bus/usb/devices/{usb_port}/serial"
     try:
-      with open(serial_file, "r", encoding="utf-8") as file:
+      with open(serial_file, encoding="utf-8") as file:
         return file.read().strip()
     except FileNotFoundError:
       return None
@@ -105,17 +104,17 @@ def _check_dependencies() -> None:
       subprocess.run(["dpkg", "-s", pkg], check=True, stdout=subprocess.DEVNULL)
     except subprocess.CalledProcessError as exc:
       raise RuntimeError(
-          f"Missing dependency: {pkg}. Please install with `sudo apt install "
-          f"{pkg}`."
+        f"Missing dependency: {pkg}. Please install with `sudo apt install "
+        f"{pkg}`."
       ) from exc
 
 
-def _get_can_interfaces() -> List[Tuple[str, str]]:
+def _get_can_interfaces() -> list[tuple[str, str]]:
   """Return a list of (interface, usb_address) pairs."""
   result = []
   try:
     links = subprocess.check_output(
-        ["ip", "-br", "link", "show", "type", "can"], text=True
+      ["ip", "-br", "link", "show", "type", "can"], text=True
     )
     for line in links.splitlines():
       iface = line.split()[0]
@@ -132,10 +131,10 @@ def _get_can_interfaces() -> List[Tuple[str, str]]:
   return result
 
 
-def _get_interface_bitrate(interface: str) -> Optional[int]:
+def _get_interface_bitrate(interface: str) -> int | None:
   try:
     details = subprocess.check_output(
-        ["ip", "-details", "link", "show", interface], text=True
+      ["ip", "-details", "link", "show", interface], text=True
     )
     for line in details.splitlines():
       if "bitrate" in line:
@@ -148,7 +147,7 @@ def _get_interface_bitrate(interface: str) -> Optional[int]:
 def _interface_exists(name: str) -> bool:
   try:
     subprocess.check_output(
-        ["ip", "link", "show", name], stderr=subprocess.DEVNULL
+      ["ip", "link", "show", name], stderr=subprocess.DEVNULL
     )
     return True
   except subprocess.CalledProcessError:
@@ -166,17 +165,17 @@ def _interface_is_up(name: str) -> bool:
 def _configure(interface: str, bitrate: int):
   subprocess.run(["sudo", "ip", "link", "set", interface, "down"], check=True)
   subprocess.run(
-      [
-          "sudo",
-          "ip",
-          "link",
-          "set",
-          interface,
-          "type",
-          "can",
-          "bitrate",
-          str(bitrate),
-      ],
-      check=True,
+    [
+      "sudo",
+      "ip",
+      "link",
+      "set",
+      interface,
+      "type",
+      "can",
+      "bitrate",
+      str(bitrate),
+    ],
+    check=True,
   )
   subprocess.run(["sudo", "ip", "link", "set", interface, "up"], check=True)

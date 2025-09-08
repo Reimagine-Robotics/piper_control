@@ -1,5 +1,6 @@
 target-version = "py312"
 indent-width = 2
+line-length = 80
 
 [lint]
 extend-select = [

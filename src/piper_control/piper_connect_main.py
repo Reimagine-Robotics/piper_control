@@ -6,8 +6,8 @@ from piper_control import piper_connect
 def main():
   """Activates connection to all arms."""
   print(
-      "Will find and activate all available ports. Make sure you have sudo "
-      "access."
+    "Will find and activate all available ports. Make sure you have sudo "
+    "access."
   )
   print(f"All available ports: {piper_connect.find_ports()}")
   print("Activating all ports...")

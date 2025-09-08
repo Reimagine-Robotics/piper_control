@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Sequence
 from enum import IntEnum
-from typing import Literal, Sequence, TypeGuard
+from typing import Literal, TypeGuard
 
 import piper_sdk
 from packaging import version as packaging_version
@@ -23,7 +24,7 @@ class EmergencyStop(IntEnum):
 
 
 def validate_emergency_stop(
-    state: EmergencyStop,
+  state: EmergencyStop,
 ) -> TypeGuard[Literal[0, 1, 2]]:
   return state in {0, 1, 2}
 
@@ -41,7 +42,7 @@ class ControlMode(IntEnum):
 
 
 def validate_control_mode(
-    mode: ControlMode,
+  mode: ControlMode,
 ) -> TypeGuard[Literal[0, 1, 3, 4, 7]]:
   """
   Validate the control mode is one of the allowed values from Piper SDK.
@@ -87,7 +88,7 @@ class ArmController(IntEnum):
 
 
 def validate_arm_controller(
-    controller: ArmController,
+  controller: ArmController,
 ) -> TypeGuard[Literal[0, 173, 255]]:
   """
   Validate the arm controller is one of the allowed values from Piper SDK.
@@ -170,8 +171,8 @@ class ArmInstallationPos(IntEnum):
 
 
 JOINT_LIMITS_RAD = {
-    "min": [-2.6179, 0.0, -2.967, -1.745, -1.22, -2.09439],
-    "max": [2.6179, 3.14, 0.0, 1.745, 1.22, 2.09439],
+  "min": [-2.6179, 0.0, -2.967, -1.745, -1.22, -2.09439],
+  "max": [2.6179, 3.14, 0.0, 1.745, 1.22, 2.09439],
 }
 
 
@@ -191,8 +192,8 @@ class PiperInterface:
   """
 
   def __init__(
-      self,
-      can_port: str = "can0",
+    self,
+    can_port: str = "can0",
   ) -> None:
     """
     Initializes the PiperControl with a specified CAN port.
@@ -206,7 +207,7 @@ class PiperInterface:
     self.piper.ConnectPort()
 
   def set_installation_pos(
-      self, installation_pos: ArmInstallationPos = ArmInstallationPos.UPRIGHT
+    self, installation_pos: ArmInstallationPos = ArmInstallationPos.UPRIGHT
   ) -> None:
     """Sets the robot installation pose, call this right after connecting."""
     self.piper.MotionCtrl_2(0x01, 0x01, 0, 0, 0, installation_pos.value)
@@ -220,7 +221,7 @@ class PiperInterface:
     """
 
     def _validate_zero_indexed_joint(
-        joint: int,
+      joint: int,
     ) -> TypeGuard[Literal[0, 1, 2, 3, 4, 5]]:
       return 0 <= joint <= 5
 
@@ -229,11 +230,11 @@ class PiperInterface:
 
     for joint in joints:
       self.piper.JointConfig(
-          joint_num=joint + 1,  # type: ignore
-          set_zero=0xAE,
-          acc_param_is_effective=0,
-          max_joint_acc=0,
-          clear_err=0,
+        joint_num=joint + 1,  # type: ignore
+        set_zero=0xAE,
+        acc_param_is_effective=0,
+        max_joint_acc=0,
+        clear_err=0,
       )
 
   def set_emergency_stop(self, state: EmergencyStop):
@@ -273,7 +274,7 @@ class PiperInterface:
     return TeachStatus(self.get_arm_status().arm_status.teach_status)
 
   def get_gripper_status(
-      self,
+    self,
   ) -> piper_sdk.C_PiperInterface_V2.ArmGripper:
     """
     Gets the current gripper status of the robot.
@@ -307,12 +308,12 @@ class PiperInterface:
       Sequence[float]: Joint positions in radians.
     """
     raw_positions = [
-        self.piper.GetArmJointMsgs().joint_state.joint_1,
-        self.piper.GetArmJointMsgs().joint_state.joint_2,
-        self.piper.GetArmJointMsgs().joint_state.joint_3,
-        self.piper.GetArmJointMsgs().joint_state.joint_4,
-        self.piper.GetArmJointMsgs().joint_state.joint_5,
-        self.piper.GetArmJointMsgs().joint_state.joint_6,
+      self.piper.GetArmJointMsgs().joint_state.joint_1,
+      self.piper.GetArmJointMsgs().joint_state.joint_2,
+      self.piper.GetArmJointMsgs().joint_state.joint_3,
+      self.piper.GetArmJointMsgs().joint_state.joint_4,
+      self.piper.GetArmJointMsgs().joint_state.joint_5,
+      self.piper.GetArmJointMsgs().joint_state.joint_6,
     ]
 
     # API reports positions in milli-degrees. Convert to radians.
@@ -326,12 +327,12 @@ class PiperInterface:
       Sequence[float]: Joint velocities in radians per second.
     """
     raw_speeds = [
-        self.piper.GetArmHighSpdInfoMsgs().motor_1.motor_speed,
-        self.piper.GetArmHighSpdInfoMsgs().motor_2.motor_speed,
-        self.piper.GetArmHighSpdInfoMsgs().motor_3.motor_speed,
-        self.piper.GetArmHighSpdInfoMsgs().motor_4.motor_speed,
-        self.piper.GetArmHighSpdInfoMsgs().motor_5.motor_speed,
-        self.piper.GetArmHighSpdInfoMsgs().motor_6.motor_speed,
+      self.piper.GetArmHighSpdInfoMsgs().motor_1.motor_speed,
+      self.piper.GetArmHighSpdInfoMsgs().motor_2.motor_speed,
+      self.piper.GetArmHighSpdInfoMsgs().motor_3.motor_speed,
+      self.piper.GetArmHighSpdInfoMsgs().motor_4.motor_speed,
+      self.piper.GetArmHighSpdInfoMsgs().motor_5.motor_speed,
+      self.piper.GetArmHighSpdInfoMsgs().motor_6.motor_speed,
     ]
 
     # API reports speeds in milli-degrees. Convert to radians.
@@ -345,12 +346,12 @@ class PiperInterface:
       Sequence[float]: Joint efforts in Nm.
     """
     return [
-        self.piper.GetArmHighSpdInfoMsgs().motor_1.effort / 1e3,
-        self.piper.GetArmHighSpdInfoMsgs().motor_2.effort / 1e3,
-        self.piper.GetArmHighSpdInfoMsgs().motor_3.effort / 1e3,
-        self.piper.GetArmHighSpdInfoMsgs().motor_4.effort / 1e3,
-        self.piper.GetArmHighSpdInfoMsgs().motor_5.effort / 1e3,
-        self.piper.GetArmHighSpdInfoMsgs().motor_6.effort / 1e3,
+      self.piper.GetArmHighSpdInfoMsgs().motor_1.effort / 1e3,
+      self.piper.GetArmHighSpdInfoMsgs().motor_2.effort / 1e3,
+      self.piper.GetArmHighSpdInfoMsgs().motor_3.effort / 1e3,
+      self.piper.GetArmHighSpdInfoMsgs().motor_4.effort / 1e3,
+      self.piper.GetArmHighSpdInfoMsgs().motor_5.effort / 1e3,
+      self.piper.GetArmHighSpdInfoMsgs().motor_6.effort / 1e3,
     ]
 
   def get_gripper_state(self) -> tuple[float, float]:
@@ -374,9 +375,9 @@ class PiperInterface:
     """Returns whether each of the 6 motors is in error."""
     arm_msgs = self.piper.GetArmLowSpdInfoMsgs()
     return [
-        # motor_xx attributes are 1 indexed
-        getattr(arm_msgs, f"motor_{i + 1}").foc_status.driver_error_status
-        for i in range(6)
+      # motor_xx attributes are 1 indexed
+      getattr(arm_msgs, f"motor_{i + 1}").foc_status.driver_error_status
+      for i in range(6)
     ]
 
   def show_status(self, arm_status=None) -> None:
@@ -396,8 +397,8 @@ class PiperInterface:
     print(f"mode_feed: {MoveMode(arm_status.arm_status.mode_feed).name}")
     print(f"teach_mode: {TeachStatus(arm_status.arm_status.teach_status).name}")
     print(
-        "motion_status:"
-        f" {MotionStatus(arm_status.arm_status.motion_status).name}"
+      "motion_status:"
+      f" {MotionStatus(arm_status.arm_status.motion_status).name}"
     )
     print(f"trajectory_num: {arm_status.arm_status.trajectory_num}")
     print(f"err_code: {arm_status.arm_status.err_code}")
@@ -414,10 +415,10 @@ class PiperInterface:
       comms = comms_errors[i]
       motor = motor_errors[i]
       print(
-          f"  Joint {i+1}:"
-          f" limit={error_names[limit]}"
-          f" comms={error_names[comms]}"
-          f" motor={error_names[motor]}"
+        f"  Joint {i+1}:"
+        f" limit={error_names[limit]}"
+        f" comms={error_names[comms]}"
+        f" motor={error_names[motor]}"
       )
 
     gripper_status = self.get_gripper_status()
@@ -425,17 +426,17 @@ class PiperInterface:
     foc_status = gripper_status.gripper_state.foc_status
     print(f"  voltage_too_low     : {error_names[foc_status.voltage_too_low]}")
     print(
-        f"  motor_overheating   : {error_names[foc_status.motor_overheating]}"
+      f"  motor_overheating   : {error_names[foc_status.motor_overheating]}"
     )
     print(
-        f"  driver_overcurrent  : {error_names[foc_status.driver_overcurrent]}"
+      f"  driver_overcurrent  : {error_names[foc_status.driver_overcurrent]}"
     )
     print(
-        f"  driver_overheating  : {error_names[foc_status.driver_overheating]}"
+      f"  driver_overheating  : {error_names[foc_status.driver_overheating]}"
     )
     print(f"  sensor_status       : {error_names[foc_status.sensor_status]}")
     print(
-        f"  driver_error_status : {error_names[foc_status.driver_error_status]}"
+      f"  driver_error_status : {error_names[foc_status.driver_error_status]}"
     )
     print(f"  driver_enable_status: {foc_status.driver_enable_status}")
     print(f"  homing_status       : {error_names[foc_status.homing_status]}")
@@ -456,12 +457,12 @@ class PiperInterface:
     """
     arm_msgs = self.piper.GetArmLowSpdInfoMsgs()
     return (
-        arm_msgs.motor_1.foc_status.driver_enable_status
-        and arm_msgs.motor_2.foc_status.driver_enable_status
-        and arm_msgs.motor_3.foc_status.driver_enable_status
-        and arm_msgs.motor_4.foc_status.driver_enable_status
-        and arm_msgs.motor_5.foc_status.driver_enable_status
-        and arm_msgs.motor_6.foc_status.driver_enable_status
+      arm_msgs.motor_1.foc_status.driver_enable_status
+      and arm_msgs.motor_2.foc_status.driver_enable_status
+      and arm_msgs.motor_3.foc_status.driver_enable_status
+      and arm_msgs.motor_4.foc_status.driver_enable_status
+      and arm_msgs.motor_5.foc_status.driver_enable_status
+      and arm_msgs.motor_6.foc_status.driver_enable_status
     )
 
   def is_enabled(self) -> bool:
@@ -486,9 +487,9 @@ class PiperInterface:
     self.piper.GripperCtrl(0, 0, GripperCode.DISABLE_AND_CLEAR_ERROR, 0)
 
   def standby(
-      self,
-      move_mode: MoveMode = MoveMode.JOINT,
-      arm_controller: ArmController = ArmController.POSITION_VELOCITY,
+    self,
+    move_mode: MoveMode = MoveMode.JOINT,
+    arm_controller: ArmController = ArmController.POSITION_VELOCITY,
   ) -> None:
     """
     Puts the robot into standby mode.
@@ -500,18 +501,18 @@ class PiperInterface:
       raise ValueError(f"Invalid arm controller: {arm_controller}")
 
     self.piper.MotionCtrl_2(
-        ControlMode.STANDBY,
-        move_mode,
-        0,
-        arm_controller,
+      ControlMode.STANDBY,
+      move_mode,
+      0,
+      arm_controller,
     )
 
   def set_arm_mode(
-      self,
-      speed: int = 100,
-      move_mode: MoveMode = MoveMode.JOINT,
-      ctrl_mode: ControlMode = ControlMode.CAN_COMMAND,
-      arm_controller: ArmController = ArmController.POSITION_VELOCITY,
+    self,
+    speed: int = 100,
+    move_mode: MoveMode = MoveMode.JOINT,
+    ctrl_mode: ControlMode = ControlMode.CAN_COMMAND,
+    arm_controller: ArmController = ArmController.POSITION_VELOCITY,
   ) -> None:
     """
     Changes the arm motion control mode.
@@ -530,10 +531,10 @@ class PiperInterface:
       raise ValueError(f"Invalid control mode: {ctrl_mode}")
 
     self.piper.MotionCtrl_2(
-        ctrl_mode,  # type: ignore
-        move_mode,
-        speed,
-        arm_controller,
+      ctrl_mode,  # type: ignore
+      move_mode,
+      speed,
+      arm_controller,
     )
 
   def command_joint_positions(self, positions: Sequence[float]) -> None:
@@ -559,11 +560,11 @@ class PiperInterface:
     self.piper.JointCtrl(*joint_angles)  # pylint: disable=no-value-for-parameter
 
   def command_joint_position_mit(
-      self,
-      motor_idx: int,
-      position: float,
-      kp: float,
-      kd: float,
+    self,
+    motor_idx: int,
+    position: float,
+    kp: float,
+    kd: float,
   ) -> None:
     """
     Commands a joint via MIT control to move to a given angle.
@@ -582,9 +583,9 @@ class PiperInterface:
     self.piper.JointMitCtrl(motor_idx + 1, position, 0.0, kp, kd, 0.0)
 
   def command_joint_torque_mit(
-      self,
-      motor_idx: int,
-      torque: float,
+    self,
+    motor_idx: int,
+    torque: float,
   ) -> None:
     """
     Commands a joint via MIT control to move to a given angle.
@@ -620,9 +621,9 @@ class PiperInterface:
     self.piper.EndPoseCtrl(x_mm, y_mm, z_mm, roll_deg, pitch_deg, yaw_deg)
 
   def command_gripper(
-      self,
-      position: float | None = None,
-      effort: float | None = None,
+    self,
+    position: float | None = None,
+    effort: float | None = None,
   ) -> None:
     """
     Controls the gripper by setting its position and effort.
@@ -680,7 +681,7 @@ class PiperInterface:
       raise RuntimeError("Failed to get firmware version within timeout.")
     try:
       version = packaging_version.parse(
-          version_str[version_str.index("V") :].strip()
+        version_str[version_str.index("V") :].strip()
       )
       return str(version)
     except packaging_version.InvalidVersion:
