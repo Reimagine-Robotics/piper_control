@@ -60,7 +60,7 @@ def main():
       robot,
       kp_gains=5.0,
       kd_gains=0.8,
-      rest_position=piper_control.REST_POSITION,
+      rest_position=piper_control.ArmOrientations.upright.rest_position,
   ) as controller:
     print("moving to position ...")
     success = controller.move_to_position(
