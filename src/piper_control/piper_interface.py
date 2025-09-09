@@ -155,10 +155,12 @@ class GripperCode(IntEnum):
   ENABLE_AND_CLEAR_ERROR = 0x03
 
 
-# The enum values correspond to the piper_sdk codes can be found here:
-# https://github.com/agilexrobotics/piper_sdk/blob/6e3afe54e408e75adc53ac438fc0a240f8e07361/piper_sdk/interface/piper_interface_v2.py#L1119
 class ArmInstallationPos(IntEnum):
-  """Installation positions for the Piper arm."""
+  """Installation positions for the Piper arm.
+
+  The enum values correspond to the piper_sdk codes can be found here:
+  https://github.com/agilexrobotics/piper_sdk/blob/6e3afe54e408e75adc53ac438fc0a240f8e07361/piper_sdk/interface/piper_interface_v2.py#L1119
+  """
 
   UPRIGHT = 0x01  # Horizontal upright
 
