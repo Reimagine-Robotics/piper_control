@@ -5,10 +5,9 @@ sleeps, using piper_interface under the hood.
 """
 
 import time
-from typing import Callable
+from collections.abc import Callable
 
 from piper_control import piper_interface as pi
-
 
 _SHORT_WAIT = 0.1
 _LONG_WAIT = 0.5

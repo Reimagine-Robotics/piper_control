@@ -246,6 +246,7 @@ max-line-length=80
 # Regexp for a line that is allowed to be longer than the limit.
 ignore-long-lines=(?x)(
   ^\s*(\#\ )?<?https?://\S+>?$|
+  ^\s*"https?://\S+"$|
   ^\s*(from\s+\S+\s+)?import\s+.+$)
 
 # Allow the body of an if to be on the same line as the test if there is no
@@ -256,7 +257,7 @@ single-line-if-stmt=yes
 max-module-lines=99999
 
 # String used as indentation unit.  The internal Google style guide mandates 2
-# spaces.  Google's externaly-published style guide says 4, consistent with
+# spaces.  Google's externally-published style guide says 4, consistent with
 # PEP 8.  Here, we use 2 spaces, for conformity with many open-sourced Google
 # projects (like TensorFlow).
 indent-string='  '

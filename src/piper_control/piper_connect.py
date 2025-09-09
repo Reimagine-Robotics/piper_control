@@ -8,20 +8,19 @@ from higher-level Python code.
 
 import subprocess
 import time
-from typing import List, Optional, Tuple
 
 # ------------------------
 # Public API
 # ------------------------
 
 
-def find_ports() -> List[Tuple[str, str]]:
+def find_ports() -> list[tuple[str, str]]:
   """Return a list of (interface, usb_address) pairs."""
   _check_dependencies()
   return _get_can_interfaces()
 
 
-def active_ports() -> List[str]:
+def active_ports() -> list[str]:
   """Return list of CAN interfaces that are currently up."""
   _check_dependencies()
   result = []
@@ -32,9 +31,9 @@ def active_ports() -> List[str]:
 
 
 def activate(
-    ports: Optional[List[Tuple[str, str]]] = None,
+    ports: list[tuple[str, str]] | None = None,
     default_bitrate: int = 1000000,
-    timeout: Optional[int] = None,
+    timeout: int | None = None,
 ):
   """Activate all provided ports, or auto-discover and activate all known CAN
   interfaces.
@@ -67,7 +66,7 @@ def activate(
 
   ports = sorted(ports, key=lambda p: p[1])  # Sort by usb_addr
 
-  for idx, (iface, _) in enumerate(ports):
+  for iface, _ in ports:
     current_bitrate = _get_interface_bitrate(iface)
     if current_bitrate == default_bitrate:
       continue  # Already configured
@@ -86,7 +85,7 @@ def get_can_adapter_serial(can_port: str) -> str | None:
   if usb_port:
     serial_file = f"/sys/bus/usb/devices/{usb_port}/serial"
     try:
-      with open(serial_file, "r", encoding="utf-8") as file:
+      with open(serial_file, encoding="utf-8") as file:
         return file.read().strip()
     except FileNotFoundError:
       return None
@@ -110,7 +109,7 @@ def _check_dependencies() -> None:
       ) from exc
 
 
-def _get_can_interfaces() -> List[Tuple[str, str]]:
+def _get_can_interfaces() -> list[tuple[str, str]]:
   """Return a list of (interface, usb_address) pairs."""
   result = []
   try:
@@ -132,7 +131,7 @@ def _get_can_interfaces() -> List[Tuple[str, str]]:
   return result
 
 
-def _get_interface_bitrate(interface: str) -> Optional[int]:
+def _get_interface_bitrate(interface: str) -> int | None:
   try:
     details = subprocess.check_output(
         ["ip", "-details", "link", "show", interface], text=True

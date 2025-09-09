@@ -6,10 +6,12 @@ python3 scripts/simple_move.py
 
 import time
 
-from piper_control import piper_connect
-from piper_control import piper_init
-from piper_control import piper_interface
-from piper_control import piper_control
+from piper_control import (
+    piper_connect,
+    piper_control,
+    piper_init,
+    piper_interface,
+)
 
 
 def main():

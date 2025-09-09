@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Sequence
 from enum import IntEnum
-from typing import Literal, Sequence, TypeGuard
+from typing import Literal, TypeGuard
 
 import piper_sdk
 from packaging import version as packaging_version
@@ -103,9 +104,12 @@ def validate_arm_controller(
   return controller in {0, 173, 255}
 
 
-# The enum values correspond to the piper_sdk arm status codes found here:
-# https://github.com/agilexrobotics/piper_sdk/blob/4eddfcf817cd87de9acee316a72cf5b988025378/piper_msgs/msg_v2/feedback/arm_status.py#L117
 class ArmStatus(IntEnum):
+  """The enum values correspond to the piper_sdk arm status codes found here.
+
+  https://github.com/agilexrobotics/piper_sdk/blob/4eddfcf817cd87de9acee316a72cf5b988025378/piper_msgs/msg_v2/feedback/arm_status.py#L117
+  """
+
   NORMAL = 0x00
   EMERGENCY_STOP = 0x01
   NO_SOLUTION = 0x02
@@ -152,6 +156,12 @@ class GripperCode(IntEnum):
 
 
 class ArmInstallationPos(IntEnum):
+  """Installation positions for the Piper arm.
+
+  The enum values correspond to the piper_sdk codes can be found here:
+  https://github.com/agilexrobotics/piper_sdk/blob/6e3afe54e408e75adc53ac438fc0a240f8e07361/piper_sdk/interface/piper_interface_v2.py#L1119
+  """
+
   UPRIGHT = 0x01  # Horizontal upright
 
   # Side mount left. In this orientation, the rear cable is facing backward and
@@ -162,11 +172,12 @@ class ArmInstallationPos(IntEnum):
   # the green LED is below the cable socket.
   RIGHT = 0x03
 
+  @staticmethod
   def from_string(pos: str) -> ArmInstallationPos:
     try:
       return ArmInstallationPos[pos.upper()]
-    except KeyError:
-      raise ValueError(f"Invalid installation position: {pos}")
+    except KeyError as exc:
+      raise ValueError(f"Invalid installation position: {pos}") from exc
 
 
 JOINT_LIMITS_RAD = {

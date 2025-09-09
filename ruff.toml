@@ -1,0 +1,28 @@
+target-version = "py312"
+indent-width   = 2
+line-length    = 80
+
+[lint]
+extend-select = [
+  "W",
+  # isort
+  "I",
+  # pep8-naming
+  "N",
+  # pyupgrade
+  "UP",
+  # pandas-vet
+  "PD",
+  # NumPy-specific rules
+  "NPY",
+  # Ruff-specific rules
+  "RUF",
+]
+
+[lint.pydocstyle]
+convention = "google"
+
+[lint.per-file-ignores]
+"src/piper_control/__init__.py"        = ["F401"]
+"src/piper_control/piper_control.py"   = ["RUF009"]
+"src/piper_control/piper_connect.py"   = ["E741"]

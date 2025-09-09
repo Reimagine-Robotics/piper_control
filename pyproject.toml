@@ -25,3 +25,10 @@ build-backend = "backend"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[dependency-groups]
+dev = [
+  "jupyterlab>=4.4.5",
+  "pre-commit>=4.2.0",
+  "pylint>=3.3.8",
+]

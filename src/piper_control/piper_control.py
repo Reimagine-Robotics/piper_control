@@ -10,7 +10,7 @@ Piper robot. They provide two main benefits:
 import abc
 import dataclasses
 import time
-from typing import Sequence
+from collections.abc import Sequence
 
 import numpy as np
 from packaging import version as packaging_version
@@ -295,7 +295,6 @@ class MitJointPositionController(JointPositionController):
       kp_gains: Sequence[float] | None = None,
       kd_gains: Sequence[float] | None = None,
   ) -> None:
-
     if not kp_gains:
       kp_gains = self._kp_gains
 
@@ -349,7 +348,6 @@ class MitJointPositionController(JointPositionController):
       self,
       torques: Sequence[float],
   ) -> None:
-
     assert len(torques) == 6
 
     for ji, torque in enumerate(torques):
