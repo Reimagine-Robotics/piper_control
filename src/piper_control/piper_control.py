@@ -94,9 +94,7 @@ _MIT_FLIP_FIX_VERSION = packaging_version.Version("1.7-3")
 _PRE_V1_7_3_MIT_JOINT_FLIP = [True, True, False, True, False, True]
 _POST_V1_7_3_MIT_JOINT_FLIP = [False, False, False, False, False, False]
 
-# These limits make sense only for upright robot arm.
-# _MIT_TORQUE_LIMITS = [0.5, 3.0, 2.0, 2.0, 2.0, 0.5]
-_MIT_TORQUE_LIMITS = [3.0, 3.0, 3.0, 3.0, 3.0, 3.0]
+_MIT_TORQUE_LIMITS = [10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
 
 # Allowed gains range allowed for the Mit controller.
 _MAX_KP_GAIN = 100.0
