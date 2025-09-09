@@ -71,7 +71,7 @@ def activate(
     current_bitrate = _get_interface_bitrate(iface)
     if current_bitrate == default_bitrate:
       continue  # Already configured
-    _rename_and_configure(iface, default_bitrate)
+    _configure(iface, default_bitrate)
 
 
 def get_can_adapter_serial(can_port: str) -> str | None:
