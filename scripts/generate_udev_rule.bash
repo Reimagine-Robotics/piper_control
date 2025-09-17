@@ -65,6 +65,15 @@ fi
 if [ -z "$DESIRED_NAME" ]; then
     DESIRED_NAME="$CAN_INTERFACE"
     info "No custom can interface name specified, keeping original name: $DESIRED_NAME"
+else
+    # Validate desired interface name format (allow alphanumeric, hyphens, underscores)
+    if ! [[ "$DESIRED_NAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        error "Invalid desired interface name '$DESIRED_NAME'. Use only letters, numbers, hyphens, and underscores."
+    fi
+    # Check length (Linux interface names are limited to 15 characters)
+    if [ ${#DESIRED_NAME} -gt 15 ]; then
+        error "Desired interface name '$DESIRED_NAME' is too long (max 15 characters)"
+    fi
 fi
 
 # Check if running as root (always needed for creating udev rules)
