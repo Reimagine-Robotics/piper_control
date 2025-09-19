@@ -701,7 +701,8 @@ class PiperInterface:
   def hard_reset(self) -> None:
     """Performs a hard reset of the Piper robot.
 
-    Note: This will disable the arm which will cause it to drop if it is not supported.
+    Note: This will disable the arm which will cause it to drop
+    if it is not supported.
     """
     self.set_emergency_stop(EmergencyStop.RESUME)
     self.standby(move_mode=MoveMode.POSITION)
