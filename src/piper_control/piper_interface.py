@@ -710,3 +710,35 @@ class PiperInterface:
     """
     self.set_emergency_stop(EmergencyStop.RESUME)
     self.standby(move_mode=MoveMode.POSITION)
+
+  def set_collision_protection(self, levels: Sequence[int]) -> None:
+    """
+    Sets the collision protection levels for each joint.
+
+    Args:
+      levels (Sequence[int]): A list of 6 integers representing the protection
+        levels for joints 1-6. Values must be between 0 and 8:
+        - 0: No collision detection
+        - 1-8: Increasing detection thresholds
+
+    Raises:
+      ValueError: If the list doesn't have exactly 6 elements or if any level
+        is outside the range [0, 8].
+    """
+    if len(levels) != 6:
+      raise ValueError(f"Expected 6 protection levels, got {len(levels)}")
+
+    for i, level in enumerate(levels):
+      if not 0 <= level <= 8:
+        raise ValueError(
+            f"Joint {i+1} protection level must be between 0 and 8, got {level}"
+        )
+
+    self.piper.CrashProtectionConfig(
+        levels[0],
+        levels[1],
+        levels[2],
+        levels[3],
+        levels[4],
+        levels[5],
+    )
