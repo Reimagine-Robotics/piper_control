@@ -420,6 +420,7 @@ class PiperInterface:
     limit_errors = [bool(err_code & (1 << b)) for b in range(6)]
     comms_errors = [bool(err_code & (1 << (b + 9))) for b in range(6)]
     motor_errors = self.get_motor_errors()
+    arm_msgs = self.piper.GetArmLowSpdInfoMsgs()
     for i in range(6):
       limit = limit_errors[i]
       comms = comms_errors[i]
@@ -430,6 +431,9 @@ class PiperInterface:
           f" comms={error_names[comms]}"
           f" motor={error_names[motor]}"
       )
+      if error_names[motor] == "ERROR":
+        foc_status = getattr(arm_msgs, f"motor_{i + 1}").foc_status
+        print(f"    foc_status: {foc_status}")
 
     gripper_status = self.get_gripper_status()
     print("\nGripper Status:")
