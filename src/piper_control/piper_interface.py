@@ -742,3 +742,26 @@ class PiperInterface:
         levels[4],
         levels[5],
     )
+
+  def get_collision_protection(self) -> list[int]:
+    """
+    Gets the current collision protection levels for each joint.
+
+    Returns:
+      list[int]: A list of 6 integers representing the protection levels for
+        joints 1-6. Values will be between 0 and 8:
+        - 0: No collision detection
+        - 1-8: Increasing detection thresholds
+    """
+    self.piper.ArmParamEnquiryAndConfig(0x02, 0x00, 0x00, 0x00, 0x03)
+    feedback = self.piper.GetCrashProtectionLevelFeedback()
+    rating = feedback.crash_protection_level_feedback
+
+    return [
+        rating.joint_1_protection_level,
+        rating.joint_2_protection_level,
+        rating.joint_3_protection_level,
+        rating.joint_4_protection_level,
+        rating.joint_5_protection_level,
+        rating.joint_6_protection_level,
+    ]
