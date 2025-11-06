@@ -247,6 +247,19 @@ class PiperInterface:
           clear_err=0,
       )
 
+  def set_gripper_zero_position(self) -> None:
+    """
+    Re-zeros the gripper at its current position.
+
+    https://github.com/agilexrobotics/piper_sdk/blob/081e7c588e5b79eeaefa67a0469bcc701c81014f/piper_sdk/demo/V2/piper_set_gripper_zero.py
+    """
+    self.piper.GripperCtrl(
+        gripper_angle=0,
+        gripper_effort=0,
+        gripper_code=GripperCode.DISABLE,
+        set_zero=0xAE,
+    )
+
   def set_emergency_stop(self, state: EmergencyStop):
     """Changes the emergency stop state on the arm.
 
