@@ -313,7 +313,6 @@ class MitJointPositionController(JointPositionController):
       # gain than when closer to the target. This has the beneficit of the arm
       # being less jerky on initial movement when the target is far away.
       kp = np.clip(1.5 / (joint_error + 0.0001), 0.75, kp_gains[ji])
-      print("Joint", ji, "error:", joint_error, "using kp:", kp)
       kd = kd_gains[ji]
 
       # Clip the position to limits so that we don't send invalid commands.
