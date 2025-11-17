@@ -17,6 +17,12 @@ GRIPPER_ANGLE_MAX = 0.07  # 70mm
 GRIPPER_EFFORT_MAX = 2.0  # 2 Nm
 
 
+JOINT_LIMITS_RAD = {
+    "min": [-2.687, 0.0, -3.054, -1.850, -1.309, -1.745],
+    "max": [2.687, 3.403, 0.0, 1.850, 1.309, 1.745],
+}
+
+
 class EmergencyStop(IntEnum):
   INVALID = 0x00
   STOP = 0x01
@@ -178,12 +184,6 @@ class ArmInstallationPos(IntEnum):
       return ArmInstallationPos[pos.upper()]
     except KeyError as exc:
       raise ValueError(f"Invalid installation position: {pos}") from exc
-
-
-JOINT_LIMITS_RAD = {
-    "min": [-2.6179, 0.0, -2.967, -1.745, -1.22, -2.09439],
-    "max": [2.6179, 3.14, 0.0, 1.745, 1.22, 2.09439],
-}
 
 
 class PiperInterface:
