@@ -315,7 +315,9 @@ class MitJointPositionController(JointPositionController):
       if self._joint_flip_map:
         pos = -pos if self._joint_flip_map[ji] else pos
 
-      self._piper.command_joint_position_mit(ji, pos, kp_gains[ji], kd_gains[ji])
+      self._piper.command_joint_position_mit(
+          ji, pos, kp_gains[ji], kd_gains[ji]
+      )
 
   def relax_joints(self, timeout: float) -> None:
     """Relaxes joints, using MIT mode, over a number of seconds.
