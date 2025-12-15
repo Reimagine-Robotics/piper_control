@@ -20,6 +20,7 @@ from piper_control.gravity_compensation import (
 
 CONTROL_FREQUENCY = 200.0
 MOVE_DURATION = 2.5  # seconds to move between configurations
+_KP_GAINS = np.array(5.0, 5.0, 5.0, 5.6, 20.0, 6.0)
 
 
 class HaltonSampler:
@@ -82,10 +83,9 @@ def main():
   robot.show_status()
   robot.set_installation_pos(piper_interface.ArmInstallationPos.UPRIGHT)
 
-  kp_gains = np.array([5.0, 5.0, 5.0, 5.0, 5.0, 5.0])
   controller = piper_control.MitJointPositionController(
       robot,
-      kp_gains=kp_gains,
+      kp_gains=_KP_GAINS,
       kd_gains=0.8,
       rest_position=piper_control.ArmOrientations.upright.rest_position,
   )
