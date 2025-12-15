@@ -294,6 +294,7 @@ class MitJointPositionController(JointPositionController):
       target: Sequence[float],
       kp_gains: Sequence[float] | None = None,
       kd_gains: Sequence[float] | None = None,
+      torques_ff: Sequence[float] | None = None,
   ) -> None:
     if not kp_gains:
       kp_gains = self._kp_gains
@@ -301,9 +302,13 @@ class MitJointPositionController(JointPositionController):
     if not kd_gains:
       kd_gains = self._kd_gains
 
+    if not torques_ff:
+      torques_ff = (0.0,) * 6
+
     assert len(target) == 6
     assert len(kp_gains) == 6
     assert len(kd_gains) == 6
+    assert len(torques_ff) == 6
 
     for ji, pos in enumerate(target):
 
@@ -315,8 +320,15 @@ class MitJointPositionController(JointPositionController):
       if self._joint_flip_map:
         pos = -pos if self._joint_flip_map[ji] else pos
 
+      torque_ff = torques_ff[ji]
+      if self._joint_flip_map:
+        torque_ff = -torque_ff if self._joint_flip_map[ji] else torque_ff
+      torque_ff = np.clip(
+          torque_ff, -_MIT_TORQUE_LIMITS[ji], _MIT_TORQUE_LIMITS[ji]
+      )
+
       self._piper.command_joint_position_mit(
-          ji, pos, kp_gains[ji], kd_gains[ji]
+          ji, pos, kp_gains[ji], kd_gains[ji], torque_ff
       )
 
   def relax_joints(self, timeout: float) -> None:
