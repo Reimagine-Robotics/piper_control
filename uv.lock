@@ -1245,7 +1245,6 @@ dependencies = [
 [package.optional-dependencies]
 gravity = [
     { name = "mujoco" },
-    { name = "ruckig" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
@@ -1263,7 +1262,6 @@ requires-dist = [
     { name = "numpy" },
     { name = "packaging" },
     { name = "piper-sdk", specifier = ">=0.2.19" },
-    { name = "ruckig", marker = "extra == 'gravity'" },
     { name = "scipy", marker = "extra == 'gravity'" },
 ]
 provides-extras = ["gravity"]
@@ -1795,12 +1793,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/26/ca/f5a344c534214cc2d41118c0699fffbdc2c1bc7046f2a2b9609765ab9c92/rpds_py-0.27.1-pp311-pypy311_pp73-musllinux_1_2_i686.whl", hash = "sha256:df8b74962e35c9249425d90144e721eed198e6555a0e22a563d29fe4486b51f6", size = 590482, upload-time = "2025-08-27T12:16:10.137Z" },
     { url = "https://files.pythonhosted.org/packages/ce/08/4349bdd5c64d9d193c360aa9db89adeee6f6682ab8825dca0a3f535f434f/rpds_py-0.27.1-pp311-pypy311_pp73-musllinux_1_2_x86_64.whl", hash = "sha256:dc23e6820e3b40847e2f4a7726462ba0cf53089512abe9ee16318c366494c17a", size = 556523, upload-time = "2025-08-27T12:16:12.188Z" },
 ]
-
-[[package]]
-name = "ruckig"
-version = "0.15.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/bc/b7/d3d7c7f507ce8b6a7558418468e796d462dd2053ff3c555727c3f384941e/ruckig-0.15.3.tar.gz", hash = "sha256:48f68535080a594e45275201896c3a71123ac4a64c668eb3cf10b8bc42f34183", size = 870129, upload-time = "2025-05-16T14:04:55.521Z" }
 
 [[package]]
 name = "scipy"

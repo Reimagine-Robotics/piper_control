@@ -104,7 +104,7 @@ Options:
 - `--model-path`: Path to MuJoCo XML model (default: bundled model)
 - `--joint-names`: Joint names in the model (default: joint1-6)
 - `--num-samples`: Number of samples to collect (default: 250)
-- `--robot-name`: CAN interface name (default: can0)
+- `--can-port`: CAN interface name (default: can0)
 
 ### Run Gravity Compensation
 
@@ -117,7 +117,7 @@ piper-gravity-compensation samples.npz
 Options:
 - `--model-path`: Path to MuJoCo XML model (default: bundled model)
 - `--joint-names`: Joint names in the model (default: joint1-6)
-- `--robot-name`: CAN interface name (default: can0)
+- `--can-port`: CAN interface name (default: can0)
 - `--model-type`: Compensation model type (default: cubic)
   - Choices: linear, affine, quadratic, cubic, features, direct
 

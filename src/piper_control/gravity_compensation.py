@@ -264,7 +264,7 @@ def main():
       default=list(DEFAULT_JOINT_NAMES),
       help="Joint names in the model",
   )
-  parser.add_argument("--robot-name", default="can0")
+  parser.add_argument("--can-port", default="can0")
   parser.add_argument(
       "--model-type", default="cubic", choices=[t.value for t in ModelType]
   )
@@ -281,7 +281,7 @@ def main():
   )
 
   print("Connecting to Piper robot...")
-  piper = piper_interface.PiperInterface(args.robot_name)
+  piper = piper_interface.PiperInterface(args.can_port)
   piper.show_status()
 
   piper.set_installation_pos(piper_interface.ArmInstallationPos.UPRIGHT)
