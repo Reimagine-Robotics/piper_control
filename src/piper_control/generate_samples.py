@@ -18,15 +18,8 @@ from piper_control.gravity_compensation import (
     get_default_model_path,
 )
 
-DISABLE_COLLISIONS = {
-    ("link1", "link2"),
-    ("right_finger", "left_finger"),
-    ("link7", "link8"),
-    ("world", "link1"),
-}
-
 CONTROL_FREQUENCY = 200.0
-MOVE_DURATION = 3.0  # seconds to move between configurations
+MOVE_DURATION = 2.5  # seconds to move between configurations
 
 
 class HaltonSampler:
@@ -89,7 +82,7 @@ def main():
   robot.show_status()
   robot.set_installation_pos(piper_interface.ArmInstallationPos.UPRIGHT)
 
-  kp_gains = np.array([5.0, 5.0, 5.0, 5.6, 20.0, 6.0])
+  kp_gains = np.array([5.0, 5.0, 5.0, 5.0, 5.0, 5.0])
   controller = piper_control.MitJointPositionController(
       robot,
       kp_gains=kp_gains,
@@ -111,6 +104,7 @@ def main():
 
   samples_qpos = []
   samples_efforts = []
+  samples_target_qpos = []
 
   print(f"Generating {args.num_samples} collision-free samples...")
 
@@ -120,7 +114,7 @@ def main():
     data.qpos[qpos_indices] = qpos_sample
 
     if collision_checking.has_collision(
-        model, data, DISABLE_COLLISIONS, verbose=True
+        model, data, verbose=True
     ):
       continue
 
@@ -136,11 +130,12 @@ def main():
     for step in range(num_steps):
       alpha = (step + 1) / num_steps
       interp_pos = start_pos + alpha * (target_pos - start_pos)
-      controller.command_joints(interp_pos.tolist())
+      controller.command_joints(interp_pos)
 
       # Record intermediate samples
       samples_qpos.append(robot.get_joint_positions())
       samples_efforts.append(robot.get_joint_efforts())
+      samples_target_qpos.append(interp_pos)
 
       time.sleep(dt)
 
@@ -149,6 +144,7 @@ def main():
       output_path,
       qpos=np.array(samples_qpos),
       efforts=np.array(samples_efforts),
+      target_qpos=np.array(samples_target_qpos),
   )
   print(f"Saved {len(samples_qpos)} samples to {output_path}")
 
