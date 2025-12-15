@@ -373,7 +373,7 @@ def main():
               "Enter filename to save", "trajectory.json"
           )
           if filename:
-            with open(filename, "w") as f:
+            with open(filename, "w", encoding="utf-8") as f:
               json.dump(trajectory, f, indent=2)
             print(f"Saved {len(trajectory)} samples to {filename}")
           else:
@@ -390,7 +390,7 @@ def main():
           )
           if filename:
             try:
-              with open(filename) as f:
+              with open(filename, encoding="utf-8") as f:
                 loaded = json.load(f)
               # Validate robot names match
               if loaded:
@@ -398,7 +398,8 @@ def main():
                 current_robots = set(robots.keys())
                 if loaded_robots != current_robots:
                   print(
-                      f"Robot mismatch! File has {loaded_robots}, current session has {current_robots}"
+                      f"Robot mismatch! File has {loaded_robots}, current "
+                      f"session has {current_robots}"
                   )
                 else:
                   trajectory = loaded
