@@ -22,8 +22,8 @@ gravity = [
 ]
 
 [project.scripts]
-piper-generate-samples = "piper_control.generate_samples:main"
-piper-gravity-compensation = "piper_control.gravity_compensation:main"
+piper-generate-samples = "piper_control.scripts.generate_samples:main"
+piper-gravity-compensation = "piper_control.scripts.run_gravity_compensation:main"
 
 [project.urls]
 Repository = "https://github.com/Reimagine-Robotics/piper_control"

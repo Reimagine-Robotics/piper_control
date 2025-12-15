@@ -37,7 +37,7 @@ from piper_control.gravity_compensation import (
 
 CONTROL_FREQUENCY = 200.0
 MOVE_DURATION = 2.5  # seconds to move between configurations
-_KP_GAINS = np.array(5.0, 5.0, 5.0, 5.6, 20.0, 6.0)
+_KP_GAINS = np.array([5.0, 5.0, 5.0, 5.6, 20.0, 6.0])
 
 
 class HaltonSampler:
