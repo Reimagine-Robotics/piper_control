@@ -1,4 +1,21 @@
-"""Generate collision-free samples for gravity compensation calibration."""
+"""Generate collision-free samples for gravity compensation calibration.
+
+These samples are then used by a gravity-compensation model to predict the
+feed-forward torques required to counteract the effect of gravity.
+
+The model learns residuals from the efforts predicted by
+the MuJoCo simulation model to the actual efforts measured by the arm.
+
+To run with a custom model (recommended if you have attachments,
+like custom fingers or cameras):
+
+piper-generate-samples \
+  --can-port can0 \
+  --output samples.npz \
+  --num-samples 25 \
+  --model-path model.xml \
+  --joint_names=piper_j{1..6}
+"""
 
 import argparse
 import pathlib
