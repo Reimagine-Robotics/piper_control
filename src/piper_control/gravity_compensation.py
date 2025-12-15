@@ -1,6 +1,6 @@
 """Gravity compensation model using MuJoCo simulation + learned residuals."""
 
-# pylint: disable=logging-fstring-interpolation
+# pylint: disable=logging-fstring-interpolation,inconsistent-quotes
 
 import argparse
 import enum
