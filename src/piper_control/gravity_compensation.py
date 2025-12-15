@@ -1,7 +1,10 @@
 """Gravity compensation model using MuJoCo simulation + learned residuals."""
 
+# pylint: disable=logging-fstring-interpolation
+
 import argparse
 import enum
+import logging as log
 import pathlib
 import signal
 import threading
@@ -26,6 +29,7 @@ class ModelType(enum.Enum):
   DIRECT = "direct"
 
 
+# These are the joint names in the default MuJoCo model for the piper arm.
 DEFAULT_JOINT_NAMES = (
     "joint1",
     "joint2",
@@ -112,15 +116,20 @@ class GravityCompensationModel:
     self._fit_model(samples_path)
 
   def _fit_model(self, samples_path: str | pathlib.Path) -> None:
-    print(f"Loading samples from {samples_path}")
+    log.info(f"Loading samples from {samples_path}")
     npz_data = np.load(samples_path)
+    if "qpos" not in npz_data or "efforts" not in npz_data:
+      raise ValueError(
+          f"Samples file must contain 'qpos' and 'efforts' arrays."
+          f" Existing keys: {list(npz_data.keys())}"
+      )
     qpos = npz_data["qpos"]
     tau = npz_data["efforts"]
 
-    print("Calculating MuJoCo torques...")
+    log.info(f"Calculating MuJoCo torques for {qpos.shape[0]} samples")
     mj_tau = np.array([self._calculate_sim_tau(q) for q in qpos])
 
-    print(
+    log.info(
         f"Fitting gravity compensation model using {self.model_type.value}..."
     )
     self.gravity_models: dict = {}
@@ -163,9 +172,9 @@ class GravityCompensationModel:
       mesg = fit[3]
       ier = fit[4]
 
-      print(f"{joint_name}: {self.model_type.value}, params: {opt_params}")
-      print(f"  convergence: {mesg} (ier={ier})")
-      print(f"  residuals (sum): {np.abs(infodict['fvec']).sum():.6f}")
+      log.info(f"{joint_name}: {self.model_type.value}, params: {opt_params}")
+      log.info(f"  convergence: {mesg} (ier={ier})")
+      log.info(f"  residuals (sum): {np.abs(infodict['fvec']).sum():.6f}")
 
       self.gravity_models[joint_name] = lambda x, params=opt_params: model_fn(
           x, *params
@@ -194,9 +203,9 @@ class GravityCompensationModel:
       mesg = fit[3]
       ier = fit[4]
 
-      print(f"{joint_name}: feature model, {len(opt_params)} params")
-      print(f"  convergence: {mesg} (ier={ier})")
-      print(f"  residuals (sum): {np.abs(infodict['fvec']).sum():.6f}")
+      log.info(f"{joint_name}: feature model, {len(opt_params)} params")
+      log.info(f"  convergence: {mesg} (ier={ier})")
+      log.info(f"  residuals (sum): {np.abs(infodict['fvec']).sum():.6f}")
 
       self.gravity_models[joint_name] = (
           lambda data, params=opt_params, fn=feature_fn: fn(data, *params)
@@ -210,7 +219,7 @@ class GravityCompensationModel:
           else 1.0
       )
       self.gravity_models[joint_name] = lambda x, s=scale: x * s
-      print(f"{joint_name}: direct model with scale={scale}")
+      log.info(f"{joint_name}: direct model with scale={scale}")
 
   def _calculate_sim_tau(self, qpos):
     self.data.qpos[self.qpos_indices] = qpos
@@ -278,7 +287,7 @@ def main():
 
   model_type = ModelType(args.model_type)
 
-  print("Loading gravity compensation model...")
+  log.info("Loading gravity compensation model...")
   grav_model = GravityCompensationModel(
       samples_path=args.samples_path,
       model_path=args.model_path,
@@ -286,7 +295,7 @@ def main():
       joint_names=args.joint_names,
   )
 
-  print("Connecting to Piper robot...")
+  log.info("Connecting to Piper robot...")
   piper = piper_interface.PiperInterface(args.can_port)
   piper.show_status()
 
@@ -308,13 +317,13 @@ def main():
 
   def signal_handler(signum, frame):
     del signum, frame
-    print("\nShutdown signal received...")
+    log.info("\nShutdown signal received...")
     shutdown_event.set()
 
   signal.signal(signal.SIGINT, signal_handler)
   signal.signal(signal.SIGTERM, signal_handler)
 
-  print("Starting gravity compensation mode...")
+  log.info("Starting gravity compensation mode...")
   input("Press Enter to start...")
 
   try:
@@ -329,10 +338,10 @@ def main():
       controller.command_torques(applied_torque)
       time.sleep(0.005)
   finally:
-    print("Cleaning up...")
+    log.info("Cleaning up...")
     controller.stop()
     piper_init.disable_arm(piper)
-    print("Done.")
+    log.info("Done.")
 
 
 if __name__ == "__main__":
