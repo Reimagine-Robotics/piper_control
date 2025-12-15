@@ -269,8 +269,10 @@ def main():
       "--model-type", default="cubic", choices=[t.value for t in ModelType]
   )
   parser.add_argument(
-      "--damping", type=float, default=1.0,
-      help="Velocity damping gain for stability"
+      "--damping",
+      type=float,
+      default=1.0,
+      help="Velocity damping gain for stability",
   )
   args = parser.parse_args()
 

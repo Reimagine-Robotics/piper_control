@@ -113,9 +113,7 @@ def main():
     qpos_sample = halton.sample()
     data.qpos[qpos_indices] = qpos_sample
 
-    if collision_checking.has_collision(
-        model, data, verbose=True
-    ):
+    if collision_checking.has_collision(model, data, verbose=True):
       continue
 
     sample_count += 1
