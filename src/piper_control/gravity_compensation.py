@@ -268,6 +268,10 @@ def main():
   parser.add_argument(
       "--model-type", default="cubic", choices=[t.value for t in ModelType]
   )
+  parser.add_argument(
+      "--damping", type=float, default=1.0,
+      help="Velocity damping gain for stability"
+  )
   args = parser.parse_args()
 
   model_type = ModelType(args.model_type)
@@ -317,7 +321,7 @@ def main():
       qvel = np.array(piper.get_joint_velocities())
 
       hover_torque = grav_model.predict(qpos)
-      stability_torque = -qvel * 1.0
+      stability_torque = -qvel * args.damping
       applied_torque = hover_torque + stability_torque
 
       controller.command_torques(applied_torque)

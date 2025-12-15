@@ -137,13 +137,12 @@ def main():
       alpha = (step + 1) / num_steps
       interp_pos = start_pos + alpha * (target_pos - start_pos)
       controller.command_joints(interp_pos.tolist())
+
+      # Record intermediate samples
+      samples_qpos.append(robot.get_joint_positions())
+      samples_efforts.append(robot.get_joint_efforts())
+
       time.sleep(dt)
-
-    # Settle time
-    time.sleep(0.5)
-
-    samples_qpos.append(robot.get_joint_positions())
-    samples_efforts.append(robot.get_joint_efforts())
 
   output_path = pathlib.Path(args.output)
   np.savez(
