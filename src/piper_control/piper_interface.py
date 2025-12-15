@@ -579,6 +579,7 @@ class PiperInterface:
       position: float,
       kp: float,
       kd: float,
+      torque_ff: float,
   ) -> None:
     """
     Commands a joint via MIT control to move to a given angle.
@@ -589,12 +590,13 @@ class PiperInterface:
     Args:
       motor_idx (int): Motor index to control.
       position (float): Desired position in radians.
-      kps (float): Proportional gain.
-      kds (float): Derivative gain.
+      kp (float): Proportional gain.
+      kd (float): Derivative gain.
+      torque_ff (float): Feedforward torque in Nm.
     """
     assert motor_idx >= 0 and motor_idx <= 5
 
-    self.piper.JointMitCtrl(motor_idx + 1, position, 0.0, kp, kd, 0.0)
+    self.piper.JointMitCtrl(motor_idx + 1, position, 0.0, kp, kd, torque_ff)
 
   def command_joint_torque_mit(
       self,
