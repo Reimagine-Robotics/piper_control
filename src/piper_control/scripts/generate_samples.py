@@ -27,7 +27,12 @@ import time
 import mujoco as mj
 import numpy as np
 
-from piper_control import collision_checking, piper_control, piper_init, piper_interface
+from piper_control import (
+    collision_checking,
+    piper_control,
+    piper_init,
+    piper_interface,
+)
 from piper_control.gravity_compensation import (
     DEFAULT_JOINT_NAMES,
     get_default_model_path,
