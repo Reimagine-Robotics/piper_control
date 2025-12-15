@@ -120,7 +120,6 @@ def main():
   parser.add_argument(
       "--samples-path",
       type=pathlib.Path,
-      required=True,
       help="Path to the gravity compensation samples (.npz).",
   )
   parser.add_argument(
@@ -155,7 +154,16 @@ def main():
       default=DEFAULT_KD_GAINS.tolist(),
       help="Joint KD gains (6 values). Defaults to tuned values for Piper.",
   )
+  parser.add_argument(
+      "--damping",
+      type=float,
+      default=1.0,
+      help="Velocity damping gain for stability during gravity compensation",
+  )
   args = parser.parse_args()
+
+  if args.gravity and not args.samples_path:
+    parser.error("--samples-path is required when --gravity is enabled")
 
   assert len(args.robots) <= 2, "Maximum 2 robots supported"
 
@@ -176,10 +184,17 @@ def main():
 
   # Load gravity compensation model
   gravity_model = None
-  samples_path = pathlib.Path(args.samples_path).expanduser()
+  samples_path = (
+      pathlib.Path(args.samples_path).expanduser()
+      if args.samples_path
+      else None
+  )
   model_path = pathlib.Path(args.model_path).expanduser()
   model_type = ModelType(args.model_type)
   if args.gravity:
+    assert (
+        samples_path is not None
+    ), "--samples-path is required for gravity compensation"
     try:
       log.info("Loading gravity compensation model...")
       gravity_model = GravityCompensationModel(
@@ -214,7 +229,9 @@ def main():
   print("  q: quit\n")
 
   with RawTerminal() as term:
-    controllers = {name: None for name in robots}
+    controllers: dict[str, piper_control.MitJointPositionController | None] = {
+        name: None for name in robots
+    }
     arm_enabled = False
 
     while True:
@@ -222,19 +239,42 @@ def main():
 
       if key == "r":
         if not recording:
-          # Start recording - disable arms
-          for name, ctrl in controllers.items():
-            if ctrl:
-              ctrl.stop()
-              controllers[name] = None
-          for robot in robots.values():
-            robot.disable_arm()
-            robot.enable_gripper()
-          arm_enabled = False
+          print("Preparing for recording...")
+          # Start recording.
+          # If gravity is enabled, then use the gravity model to hold position.
+          # Otherwise, disable the arms.
+          if not args.gravity or not gravity_model:
+            for name, ctrl in controllers.items():
+              if ctrl:
+                ctrl.stop()
+                controllers[name] = None
+            for robot in robots.values():
+              robot.disable_arm()
+              robot.enable_gripper()
+            arm_enabled = False
+          else:
+            # Enable and create controllers.
+            if not arm_enabled:
+              for robot in robots.values():
+                piper_init.reset_arm(
+                    robot,
+                    arm_controller=piper_interface.ArmController.MIT,
+                    move_mode=piper_interface.MoveMode.MIT,
+                )
+              arm_enabled = True
+            for name, robot in robots.items():
+              controllers[name] = piper_control.MitJointPositionController(
+                  robots[name],
+                  kp_gains=kp_gains,
+                  kd_gains=kd_gains,
+                  rest_position=(
+                      piper_control.ArmOrientations.upright.rest_position
+                  ),
+              )
           recording = True
           start_time = time.time()
           trajectory = []
-          print("Recording started (arms disabled)...")
+          print("Recording started (move the arms)...")
         else:
           # Stop recording
           recording = False
@@ -260,23 +300,24 @@ def main():
           # Create controllers if needed
           for name, robot in robots.items():
             if not controllers[name]:
-              current_q = np.array(robot.get_joint_positions())
               controllers[name] = piper_control.MitJointPositionController(
                   robot,
                   kp_gains=kp_gains,
                   kd_gains=kd_gains,
-                  rest_position=current_q.tolist(),
+                  rest_position=(
+                      piper_control.ArmOrientations.upright.rest_position
+                  ),
               )
-              controllers[name].start()
+              controllers[name].start()  # type: ignore
 
           # Move to start positions
           print("Moving to start...")
           for name, robot in robots.items():
             current_q = np.array(robot.get_joint_positions())
             start_q = np.array(trajectory[0]["q"][name])
-            move_to_position(
-                controllers[name], current_q, start_q, gravity_model
-            )
+            ctrl = controllers[name]
+            assert ctrl is not None
+            move_to_position(ctrl, current_q, start_q, gravity_model)
 
           # Replay
           for robot in robots.values():
@@ -291,13 +332,15 @@ def main():
             for name, robot in robots.items():
               q = np.array(sample["q"][name])
               grip = sample["gripper"][name]
+              ctrl = controllers[name]
+              assert ctrl is not None
               if gravity_model:
                 gravity_torque = gravity_model.predict(q)
-                controllers[name].command_joints(
+                ctrl.command_joints(
                     q.tolist(), torques_ff=gravity_torque.tolist()
                 )
               else:
-                controllers[name].command_joints(q.tolist())
+                ctrl.command_joints(q.tolist())
               robot.command_gripper(grip, piper_interface.GRIPPER_EFFORT_MAX)
 
           # Flush any buffered keypresses from during replay
@@ -383,7 +426,21 @@ def main():
             "gripper": dict(gripper_positions),
         }
         trajectory.append(sample)
+        if gravity_model:
+          # During recording with gravity compensation, compute the torques
+          # required to counteract gravity.
+          for name, robot in robots.items():
+            ctrl = controllers[name]
+            if ctrl is None:
+              continue
+            qpos = robot.get_joint_positions()
+            qvel = np.array(robot.get_joint_velocities())
 
+            hover_torque = gravity_model.predict(qpos)
+            stability_torque = -qvel * args.damping
+            applied_torque = hover_torque + stability_torque
+
+            ctrl.command_torques(applied_torque)
       time.sleep(dt)
 
     # Cleanup
