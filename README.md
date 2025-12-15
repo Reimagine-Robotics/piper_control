@@ -80,6 +80,47 @@ robot.command_joint_positions(joint_angles)
 
 See the [tutorial.ipynb][tutorial] for a longer walkthrough.
 
+## Gravity Compensation
+
+The package includes tools for gravity compensation calibration and execution.
+
+### Installation
+
+Install with the gravity compensation dependencies:
+
+```shell
+pip install piper_control[gravity]
+```
+
+### Generate Calibration Samples
+
+Collect joint position and effort samples across the robot's workspace:
+
+```shell
+piper-generate-samples -o samples.npz
+```
+
+Options:
+- `--model-path`: Path to MuJoCo XML model (default: bundled model)
+- `--joint-names`: Joint names in the model (default: joint1-6)
+- `--num-samples`: Number of samples to collect (default: 250)
+- `--robot-name`: CAN interface name (default: can0)
+
+### Run Gravity Compensation
+
+Run gravity compensation using calibrated samples:
+
+```shell
+piper-gravity-compensation samples.npz
+```
+
+Options:
+- `--model-path`: Path to MuJoCo XML model (default: bundled model)
+- `--joint-names`: Joint names in the model (default: joint1-6)
+- `--robot-name`: CAN interface name (default: can0)
+- `--model-type`: Compensation model type (default: cubic)
+  - Choices: linear, affine, quadratic, cubic, features, direct
+
 ## Manual installation
 
 To manually install the latest beta version:

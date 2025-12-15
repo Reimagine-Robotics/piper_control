@@ -1,0 +1,80 @@
+<mujoco model="piper_arm">
+  <compiler angle="radian" />
+
+  <default>
+    <joint type='hinge' armature='0.1' damping='1' solimpfriction='.95 .95 0' solreffriction='.02 1' solimplimit='0 .99 .01' solreflimit='.02 1'/>
+  </default>
+
+  <option gravity="0 0 -9.81"/>
+
+  <worldbody>
+    <site name="origin_site" pos="0 0 0" size="0.001" type="sphere" rgba="1 0 0 1"/> <!-- For visualizing the origin coordinate frame -->
+
+    <body name='arm_base_link' pos='0 0 0' quat='1 0 0 0'>
+      <inertial diaginertia="0 0 0" mass="4.7" pos="0 0 0"/>
+
+      <body name="link1" pos="0 0 0.123" quat="0.707105 0 0 -0.707108">
+        <inertial pos="0.00131676 0.000310289 -0.00922875" quat="0.557105 0.432155 0.377373 0.600388" mass="0.097868" diaginertia="9.25942e-05 8.3083e-05 7.69469e-05"/>
+        <joint name="joint1" pos="0 0 0" axis="0 0 1" range="-2.687 2.687" actuatorfrcrange="-100 100"/>
+
+        <body name="link2" quat="0.499998 0.5 -0.500002 -0.5">
+          <inertial pos="0.148794 -0.00242027 0.00175155" quat="-0.0249063 0.70684 0.00803509 0.706889" mass="0.290889" diaginertia="0.00177549 0.00173142 0.00014552"/>
+          <joint name="joint2" pos="0 0 0" axis="0 0 1" range="0 3.4" actuatorfrcrange="-100 100"/>
+
+          <body name="link3" pos="0.28358 0.028726 0" quat="0.998726 0 0 0.0504536">
+            <inertial pos="-0.0996835 0.0349477 0.000508026" quat="0.0777021 0.702287 -0.0990541 0.700674" mass="0.290848" diaginertia="0.000241946 0.000222224 0.000100384"/>
+            <joint name="joint3" pos="0 0 0" axis="0 0 1" range="-3.05 0" actuatorfrcrange="-100 100"/>
+
+            <body name="link4" pos="-0.24221 0.068514 0" quat="0.544767 -0.544769 -0.450809 0.450808">
+              <inertial pos="0.000276465 -0.00102804 -0.00472831" quat="0.492305 0.505285 0.503294 0.499017" mass="0.127087" diaginertia="4.87057e-05 4.10595e-05 3.82001e-05"/>
+              <joint name="joint4" pos="0 0 0" axis="0 0 1" range="-1.85 1.85" actuatorfrcrange="-100 100"/>
+
+              <body name="link5" quat="0.707105 0.707108 0 0">
+                <inertial pos="8.82262e-05 0.0566829 -0.0019612" quat="0.507447 0.490986 0.506887 0.494466" mass="0.144711" diaginertia="5.63237e-05 4.88652e-05 4.39642e-05"/>
+                <joint name="joint5" pos="0 0 0" axis="0 0 1" range="-1.3 1.3" actuatorfrcrange="-100 100"/>
+
+                <body name="link6" pos="0 0.091 0.0014165" quat="1.89468e-08 -1.89469e-08 -0.707105 -0.707108">
+                  <joint name="joint6" pos="0 0 0" axis="0 0 1" range="-1.75 1.75" actuatorfrcrange="-100 100"/>
+
+                  <body name="gripper_link" pos="0 0 0" quat="1 0 0 0">
+
+                      <body name="gripper" pos="0 0 0" quat="1 0 0 0">
+                          <inertial pos="0.0010312 0.0121761 0.0315481" quat="0.0230402 0.707091 0.0373344 0.70576" mass="0.195187" diaginertia="0.000154294 0.000125965 6.43536e-05"/>
+
+                          <body name="finger0" pos="0 0 0.13503" quat="1.89468e-08 1.89469e-08 0.707108 0.707105">
+                            <inertial pos="-0.000277778 -0.0467673 -0.00921029" quat="0.46134 0.536174 -0.553273 0.439968" mass="0.0264823" diaginertia="1.45134e-05 1.00041e-05 5.87021e-06"/>
+                            <joint name="joint7" pos="0 0 0" axis="0 0 -1" type="slide" range="0 0.04" actuatorfrcrange="-10 10"/>
+                          </body>
+
+                          <body name="finger1" pos="0 0 0.13503" quat="1.89468e-08 -1.89469e-08 -0.707108 0.707105">
+                            <inertial pos="0.000277817 0.0467674 -0.0092103" quat="0.553273 0.439968 -0.46134 0.536174" mass="0.0264822" diaginertia="1.45133e-05 1.0004e-05 5.87021e-06"/>
+                            <joint name="joint8" pos="0 0 0" axis="0 0 -1" type="slide" range="0 0.04" actuatorfrcrange="-10 10"/>
+                          </body>
+
+                      </body>
+                  </body>
+
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <contact>
+    <exclude body1='arm_base_link' body2='link1'/>
+    <exclude body1='link1' body2='link2'/>
+    <exclude body1='link2' body2='link3'/>
+    <exclude body1='link3' body2='link4'/>
+    <exclude body1='link4' body2='link5'/>
+    <exclude body1='link5' body2='link6'/>
+    <exclude body1='link6' body2='gripper_link'/>
+    <exclude body1='gripper_link' body2='gripper'/>
+    <exclude body1='gripper' body2='finger0'/>
+    <exclude body1='gripper' body2='finger1'/>
+    <exclude body1='finger0' body2='finger1'/>
+  </contact>
+
+</mujoco>
