@@ -80,37 +80,149 @@ robot.command_joint_positions(joint_angles)
 
 See the [tutorial.ipynb][tutorial] for a longer walkthrough.
 
-## Manual installation
+## Gravity Compensation
 
-To manually install the latest beta version:
+The package includes tools for gravity compensation calibration and execution.
+
+### Installation
+
+Install with the gravity compensation dependencies:
+
+```shell
+pip install piper_control[gravity]
+```
+
+### Generate Calibration Samples
+
+Collect joint position and effort samples across the robot's workspace:
+
+```shell
+piper-generate-samples -o samples.npz
+```
+
+If using `uv`:
+
+```shell
+uv run piper-generate-samples -o /tmp/grav_comp_samples.npz
+```
+
+Options:
+
+*   `--model-path`: Path to MuJoCo XML model (default: bundled model)
+*   `--joint-names`: Joint names in the model (default: joint1-6)
+*   `--num-samples`: Number of samples to collect (default: 50)
+*   `--can-port`: CAN interface name (default: can0)
+
+### Try out the Gravity Compensation
+
+Try the gravity compensation model using calibrated samples:
+
+```shell
+piper-gravity-compensation --samples-path samples.npz
+```
+
+Options:
+
+*   `--model-path`: Path to MuJoCo XML model (default: bundled model)
+*   `--joint-names`: Joint names in the model (default: joint1-6)
+*   `--can-port`: CAN interface name (default: can0)
+*   `--model-type`: Compensation model type (default: cubic).
+    <!-- markdownlint-disable-next-line MD007 -->
+    *   Choices: linear, affine, quadratic, cubic, features, direct
+*   `--damping`: Velocity damping gain for stability (default: 1.0)
+
+## Local development setup
+
+Use this workflow when you need to develop on `piper_control` directly instead
+of installing the released package from PyPI.
+
+### 1. Clone the repository
 
 ```shell
 git clone https://github.com/Reimagine-Robotics/piper_control.git
 cd piper_control
-pip install .
 ```
 
-NOTE: The changes on the `main` branch are in beta and may be less stable than
-the released versions of the project.
+### 2. Choose how you want to manage dependencies
+
+#### Option A: Virtual environment + pip
+
+```shell
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -e .
+
+# Pull in the optional gravity-compensation tools if needed.
+pip install -e .[gravity]
+```
+
+Install any extra dev tooling you care about (e.g. `pip install pre-commit`).
+
+If you want to use our fork of `piper_sdk`, which fixes some jerkiness issues
+when using MIT mode on the Piper, you can:
+
+```shell
+pip uninstall piper_sdk
+pip install \
+  git+https://github.com/Reimagine-Robotics/piper_sdk.git@master#egg=piper_sdk
+```
+
+Swap `@master` for another branch or tag if you need something different.
+
+#### Option B: uv-managed environment
+
+[`uv`](https://github.com/astral-sh/uv) reads both `pyproject.toml` and
+`uv.lock`, so it can recreate the exact environment the branch was developed
+with, including the dev helpers defined in the `dev` dependency group.
+
+```shell
+# Create/refresh the .venv using the lockfile and install dev tools.
+uv sync --all-extras --group dev
+
+# Use uv run or activate the environment.
+source .venv/bin/activate
+# or
+uv run python -m pip list
+```
+
+`uv sync` automatically installs the gravity-compensation extras and the dev
+tools (pre-commit, jupyterlab, pylint). Use `uv run <command>` to execute tools
+without activating the environment manually.
+
+If you want to use our fork of `piper_sdk`, which fixes some jerkiness issues
+when using MIT mode on the Piper, you can:
+
+```shell
+uv pip uninstall piper_sdk
+uv pip install \
+  git+https://github.com/Reimagine-Robotics/piper_sdk.git@master#egg=piper_sdk
+```
+
+`uv pip` writes directly into the `.venv` created by `uv sync`, so this override
+persists until you run another `uv sync`.
 
 ## Generating udev rules for CAN adapters
 
-To avoid needing to run `sudo` to set up the CAN interface, you can create a udev rule to the bitrate and desired name for your CAN adapter.
+To avoid needing to run `sudo` to set up the CAN interface, you can create a
+udev rule that sets the bitrate and desired name for your CAN adapter.
 
 ### Usage
 
-1. Plug in your CAN adapter
-2. Run the script:
-   ```bash
-   sudo ./scripts/generate_udev_rule.bash -i can0 -b 1000000
-   ```
+1.  Plug in your CAN adapter
+2.  Run the script:
 
-   Or name your robot (e.g. myrobot):
+    ```bash
+    sudo ./scripts/generate_udev_rule.bash -i can0 -b 1000000
+    ```
 
-   ```bash
-   sudo ./scripts/generate_udev_rule.bash -i can0 -n myrobot -b 1000000
-   ```
-3. Unplug and replug the adapter to test
+    Or name your robot (e.g. myrobot):
+
+    ```bash
+    sudo ./scripts/generate_udev_rule.bash -i can0 -n myrobot -b 1000000
+    ```
+
+3.  Unplug and replug the adapter to test
 
 ### Test
 
@@ -285,4 +397,4 @@ it:
     If needed, swap out your main cable (the aviation connector in the back of
     the robot) and try again. Try swapping out the CAN adapter too if needed.
 
-[tutorial]: <https://github.com/Reimagine-Robotics/piper_control/blob/main/tutorial.ipynb> "Tutorial"
+[tutorial]: tutorial.ipynb "Tutorial"
