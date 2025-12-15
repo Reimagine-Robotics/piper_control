@@ -100,18 +100,19 @@ class GravityCompensationModel:
   def __init__(
       self,
       samples_path: str | pathlib.Path,
-      model_path: str | pathlib.Path,
+      model_path: str | pathlib.Path | None = None,
       model_type: ModelType = ModelType.QUADRATIC,
       joint_names: Sequence[str] = DEFAULT_JOINT_NAMES,
   ):
-    self.model = mj.MjModel.from_xml_path(str(model_path))
-    self.data = mj.MjData(self.model)
-    self.model_type = model_type
-    self.joint_names = tuple(joint_names)
+    model_path = model_path or get_default_model_path()
+    self._model = mj.MjModel.from_xml_path(str(model_path))
+    self._data = mj.MjData(self._model)
+    self._model_type = model_type
+    self._joint_names = tuple(joint_names)
 
-    joint_indices = [self.model.joint(name).id for name in self.joint_names]
-    self.qpos_indices = self.model.jnt_qposadr[joint_indices]
-    self.qvel_indices = self.model.jnt_dofadr[joint_indices]
+    joint_indices = [self._model.joint(name).id for name in self._joint_names]
+    self.qpos_indices = self._model.jnt_qposadr[joint_indices]
+    self.qvel_indices = self._model.jnt_dofadr[joint_indices]
 
     self._fit_model(samples_path)
 
@@ -130,24 +131,24 @@ class GravityCompensationModel:
     mj_tau = np.array([self._calculate_sim_tau(q) for q in qpos])
 
     log.info(
-        f"Fitting gravity compensation model using {self.model_type.value}..."
+        f"Fitting gravity compensation model using {self._model_type.value}..."
     )
     self.gravity_models: dict = {}
 
-    if self.model_type == ModelType.LINEAR:
+    if self._model_type == ModelType.LINEAR:
       self._fit_polynomial_model(_linear_gravity_tau, mj_tau, tau)
-    elif self.model_type == ModelType.AFFINE:
+    elif self._model_type == ModelType.AFFINE:
       self._fit_polynomial_model(_affine_gravity_tau, mj_tau, tau)
-    elif self.model_type == ModelType.QUADRATIC:
+    elif self._model_type == ModelType.QUADRATIC:
       self._fit_polynomial_model(_quadratic_gravity_tau, mj_tau, tau)
-    elif self.model_type == ModelType.CUBIC:
+    elif self._model_type == ModelType.CUBIC:
       self._fit_polynomial_model(_cubic_gravity_tau, mj_tau, tau)
-    elif self.model_type == ModelType.FEATURES:
+    elif self._model_type == ModelType.FEATURES:
       self._fit_feature_model(mj_tau, tau, qpos)
-    elif self.model_type == ModelType.DIRECT:
+    elif self._model_type == ModelType.DIRECT:
       self._setup_direct_model()
     else:
-      raise ValueError(f"Unknown model type: {self.model_type}")
+      raise ValueError(f"Unknown model type: {self._model_type}")
 
   def _fit_polynomial_model(self, model_fn, mj_tau, tau) -> None:
     n_params = {
@@ -155,11 +156,11 @@ class GravityCompensationModel:
         ModelType.AFFINE: 2,
         ModelType.QUADRATIC: 3,
         ModelType.CUBIC: 4,
-    }[self.model_type]
+    }[self._model_type]
 
     bounds = ([-100.0] * n_params, [100.0] * n_params)
 
-    for joint_idx, joint_name in enumerate(self.joint_names):
+    for joint_idx, joint_name in enumerate(self._joint_names):
       fit = optimize.curve_fit(
           model_fn,
           mj_tau[:, joint_idx],
@@ -172,7 +173,7 @@ class GravityCompensationModel:
       mesg = fit[3]
       ier = fit[4]
 
-      log.info(f"{joint_name}: {self.model_type.value}, params: {opt_params}")
+      log.info(f"{joint_name}: {self._model_type.value}, params: {opt_params}")
       log.info(f"  convergence: {mesg} (ier={ier})")
       log.info(f"  residuals (sum): {np.abs(infodict['fvec']).sum():.6f}")
 
@@ -181,10 +182,10 @@ class GravityCompensationModel:
       )
 
   def _fit_feature_model(self, mj_tau, tau, qpos) -> None:
-    n_joints = len(self.joint_names)
+    n_joints = len(self._joint_names)
     feature_fn = _make_feature_gravity_tau(n_joints)
 
-    for joint_idx, joint_name in enumerate(self.joint_names):
+    for joint_idx, joint_name in enumerate(self._joint_names):
       x_data = np.column_stack([mj_tau, qpos])
       n_features = 1 + n_joints * 5
       p0 = np.zeros(n_features)
@@ -212,7 +213,7 @@ class GravityCompensationModel:
       )
 
   def _setup_direct_model(self) -> None:
-    for joint_idx, joint_name in enumerate(self.joint_names):
+    for joint_idx, joint_name in enumerate(self._joint_names):
       scale = (
           DIRECT_SCALING_FACTORS[joint_idx]
           if joint_idx < len(DIRECT_SCALING_FACTORS)
@@ -222,14 +223,14 @@ class GravityCompensationModel:
       log.info(f"{joint_name}: direct model with scale={scale}")
 
   def _calculate_sim_tau(self, qpos):
-    self.data.qpos[self.qpos_indices] = qpos
-    mj.mj_forward(self.model, self.data)
-    return self.data.qfrc_bias[self.qvel_indices]
+    self._data.qpos[self.qpos_indices] = qpos
+    mj.mj_forward(self._model, self._data)
+    return self._data.qfrc_bias[self.qvel_indices]
 
   def predict(self, qpos) -> np.ndarray:
     mj_tau = self._calculate_sim_tau(qpos)
 
-    if self.model_type in (
+    if self._model_type in (
         ModelType.LINEAR,
         ModelType.AFFINE,
         ModelType.QUADRATIC,
@@ -239,16 +240,16 @@ class GravityCompensationModel:
       return np.asarray(
           [
               self.gravity_models[name](mj_tau[i])
-              for i, name in enumerate(self.joint_names)
+              for i, name in enumerate(self._joint_names)
           ]
       )
-    elif self.model_type == ModelType.FEATURES:
+    elif self._model_type == ModelType.FEATURES:
       all_data = np.concatenate([mj_tau, qpos])
       return np.asarray(
-          [self.gravity_models[name](all_data) for name in self.joint_names]
+          [self.gravity_models[name](all_data) for name in self._joint_names]
       )
     else:
-      raise ValueError(f"Unknown model type: {self.model_type}")
+      raise ValueError(f"Unknown model type: {self._model_type}")
 
 
 def get_default_model_path() -> pathlib.Path:
