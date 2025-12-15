@@ -6,6 +6,9 @@ feed-forward torques required to counteract the effect of gravity.
 The model learns residuals from the efforts predicted by
 the MuJoCo simulation model to the actual efforts measured by the arm.
 
+NOTE: This will move the robot around the full range of motion of the arm.
+Make sure the area around the robot is clear of obstacles and people.
+
 To run with a custom model (recommended if you have attachments,
 like custom fingers or cameras):
 
@@ -24,12 +27,7 @@ import time
 import mujoco as mj
 import numpy as np
 
-from piper_control import (
-    collision_checking,
-    piper_control,
-    piper_init,
-    piper_interface,
-)
+from piper_control import collision_checking, piper_control, piper_init, piper_interface
 from piper_control.gravity_compensation import (
     DEFAULT_JOINT_NAMES,
     get_default_model_path,
@@ -84,6 +82,13 @@ def main():
       "-o", "--output", required=True, help="Output .npz file path"
   )
   args = parser.parse_args()
+
+  # Make sure the user is ready for the robot to move.
+  input(
+      "WARNING: This script will move the robot around! "
+      "Make sure the area around the robot is clear of obstacles and people. "
+      "Press Enter to continue..."
+  )
 
   joint_names = args.joint_names
 

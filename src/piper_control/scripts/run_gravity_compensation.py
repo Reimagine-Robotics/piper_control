@@ -22,7 +22,7 @@ def main():
   parser = argparse.ArgumentParser(
       description="Run gravity compensation on the Piper arm"
   )
-  parser.add_argument("samples_path", help="Path to .npz samples file")
+  parser.add_argument("--samples-path", help="Path to .npz samples file")
   parser.add_argument(
       "--model-path",
       default=str(get_default_model_path()),
