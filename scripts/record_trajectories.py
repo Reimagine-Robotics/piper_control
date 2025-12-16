@@ -236,6 +236,18 @@ def main():
     }
     arm_enabled = False
 
+    # Initialize gravity compensation at startup if enabled
+    if gravity_model:
+      for name, robot in robots.items():
+        controllers[name] = piper_control.MitJointPositionController(
+            robot,
+            kp_gains=kp_gains,
+            kd_gains=kd_gains,
+            rest_position=piper_control.ArmOrientations.upright.rest_position,
+        )
+      arm_enabled = True
+      print("Gravity compensation active.")
+
     while True:
       key = term.get_key()
 
@@ -429,21 +441,21 @@ def main():
             "gripper": dict(gripper_positions),
         }
         trajectory.append(sample)
-        if gravity_model:
-          # During recording with gravity compensation, compute the torques
-          # required to counteract gravity.
-          for name, robot in robots.items():
-            ctrl = controllers[name]
-            if ctrl is None:
-              continue
-            qpos = robot.get_joint_positions()
-            qvel = np.array(robot.get_joint_velocities())
 
-            hover_torque = gravity_model.predict(qpos)
-            stability_torque = -qvel * args.damping
-            applied_torque = hover_torque + stability_torque
+      # Apply gravity compensation when enabled (both during recording and idle)
+      if gravity_model and arm_enabled:
+        for name, robot in robots.items():
+          ctrl = controllers[name]
+          if ctrl is None:
+            continue
+          qpos = robot.get_joint_positions()
+          qvel = np.array(robot.get_joint_velocities())
 
-            ctrl.command_torques(applied_torque)
+          hover_torque = gravity_model.predict(qpos)
+          stability_torque = -qvel * args.damping
+          applied_torque = hover_torque + stability_torque
+
+          ctrl.command_torques(applied_torque)
       time.sleep(dt)
 
     # Cleanup
