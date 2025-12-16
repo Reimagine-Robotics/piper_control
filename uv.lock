@@ -1261,7 +1261,7 @@ requires-dist = [
     { name = "mujoco", marker = "extra == 'gravity'" },
     { name = "numpy" },
     { name = "packaging" },
-    { name = "piper-sdk", specifier = ">=0.2.19" },
+    { name = "piper-sdk", git = "https://github.com/Reimagine-Robotics/piper_sdk/?rev=b8c46aa24e46c4f60360c5ee5fc4f26a86fbb118" },
     { name = "scipy", marker = "extra == 'gravity'" },
 ]
 provides-extras = ["gravity"]
@@ -1276,13 +1276,9 @@ dev = [
 [[package]]
 name = "piper-sdk"
 version = "0.4.1"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/Reimagine-Robotics/piper_sdk/?rev=b8c46aa24e46c4f60360c5ee5fc4f26a86fbb118#b8c46aa24e46c4f60360c5ee5fc4f26a86fbb118" }
 dependencies = [
     { name = "python-can" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/36/64/1c2606eceb35fddaaf27fcabec02b5a33d98ee11e070f5f17ccbc90274e7/piper_sdk-0.4.1.tar.gz", hash = "sha256:a8a5693d557afc45a8e2ef1b907e45c43c14c498a221a473deb028d654edd7a2", size = 144946, upload-time = "2025-07-23T03:08:30.822Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/33/1c/ba7ff89bc051bbb809be27038f1ba502efca717ce305c0a4e28accd78bf3/piper_sdk-0.4.1-py3-none-any.whl", hash = "sha256:2e6c17b3ba3df4a94d0f53b2a8724fb9977039fa58d42a99af6f681b2714a5af", size = 175935, upload-time = "2025-07-23T03:08:29.633Z" },
 ]
 
 [[package]]

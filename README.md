@@ -180,27 +180,16 @@ with, including the dev helpers defined in the `dev` dependency group.
 # Create/refresh the .venv using the lockfile and install dev tools.
 uv sync --all-extras --group dev
 
-# Use uv run or activate the environment.
-source .venv/bin/activate
-# or
-uv run python -m pip list
+uv tree
 ```
 
 `uv sync` automatically installs the gravity-compensation extras and the dev
 tools (pre-commit, jupyterlab, pylint). Use `uv run <command>` to execute tools
 without activating the environment manually.
 
-If you want to use our fork of `piper_sdk`, which fixes some jerkiness issues
-when using MIT mode on the Piper, you can:
-
-```shell
-uv pip uninstall piper_sdk
-uv pip install \
-  git+https://github.com/Reimagine-Robotics/piper_sdk.git@master#egg=piper_sdk
-```
-
-`uv pip` writes directly into the `.venv` created by `uv sync`, so this override
-persists until you run another `uv sync`.
+> [!NOTE]
+> `uv sync` will use our fork of `piper_sdk`, which fixes some jerkiness issues
+> when using MIT mode on the Piper.
 
 ## Generating udev rules for CAN adapters
 
