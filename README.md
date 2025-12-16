@@ -131,6 +131,19 @@ Options:
     *   Choices: linear, affine, quadratic, cubic, features, direct
 *   `--damping`: Velocity damping gain for stability (default: 1.0)
 
+## Collision Protection
+
+Set the collision protection level for all joints:
+
+```shell
+piper-set-collision-protection 5
+```
+
+Options:
+
+*   `level`: Protection level to set (default: 1)
+*   `--can-port`: CAN interface name (default: can0)
+
 ## Local development setup
 
 Use this workflow when you need to develop on `piper_control` directly instead
