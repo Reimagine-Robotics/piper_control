@@ -13,7 +13,7 @@ from packaging import version as packaging_version
 # Global constants
 DEG_TO_RAD = 3.1415926 / 180.0
 RAD_TO_DEG = 1 / DEG_TO_RAD
-GRIPPER_ANGLE_MAX = 0.07  # 70mm
+GRIPPER_ANGLE_MAX = 0.1  # 100mm
 GRIPPER_EFFORT_MAX = 2.0  # 2 Nm
 
 
