@@ -40,9 +40,6 @@ where = ["src"]
 [tool.setuptools.package-data]
 piper_control = ["models/*.xml"]
 
-[tool.uv.sources]
-piper-sdk = { git = "https://github.com/Reimagine-Robotics/piper_sdk/", rev = "b8c46aa24e46c4f60360c5ee5fc4f26a86fbb118" }
-
 [dependency-groups]
 dev = [
   "jupyterlab>=4.4.5",
