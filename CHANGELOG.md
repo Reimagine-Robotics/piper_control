@@ -4,9 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
--   Add ability to specify the arm installation pose.
 -   Add utility method for getting the serial number of a USB can adapter.
 -   Allow moving specific joints using MIT mode.
+
+## [1.3.0]
+
+-   Add per-arm/gripper limit helpers plus `PiperArmType`/`PiperGripperType` and
+    expose limits via `PiperInterface`.
+-   Deprecate module-level joint/gripper limit constants in favor of the new
+    helper accessors and instance properties.
 
 ## [0.1.0]
 
