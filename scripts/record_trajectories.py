@@ -20,9 +20,11 @@ import time
 import tty
 
 import numpy as np
-
 from piper_control import piper_control, piper_init, piper_interface
-from piper_control.gravity_compensation import GravityCompensationModel, ModelType
+from piper_control.gravity_compensation import (
+    GravityCompensationModel,
+    ModelType,
+)
 
 # pylint: disable=logging-fstring-interpolation,inconsistent-quotes
 

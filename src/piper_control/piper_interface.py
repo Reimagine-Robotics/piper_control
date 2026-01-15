@@ -34,6 +34,9 @@ if TYPE_CHECKING:
   GRIPPER_EFFORT_MAX = _GRIPPER_EFFORT_MAX
 
 
+# pylint: disable=invalid-name
+
+
 def __getattr__(name: str) -> object:
   if name == "JOINT_LIMITS_RAD":
     warnings.warn(
@@ -62,9 +65,16 @@ def __getattr__(name: str) -> object:
 
 def __dir__() -> list[str]:
   return sorted(
-      list(globals().keys())
-      + ["JOINT_LIMITS_RAD", "GRIPPER_ANGLE_MAX", "GRIPPER_EFFORT_MAX"]
+      [
+          *globals().keys(),
+          "JOINT_LIMITS_RAD",
+          "GRIPPER_ANGLE_MAX",
+          "GRIPPER_EFFORT_MAX",
+      ]
   )
+
+
+# pylint: enable=invalid-name
 
 
 class PiperArmType(enum.Enum):
@@ -650,7 +660,12 @@ class PiperInterface:
     self.piper.DisableArm(7)
 
   def disable_gripper(self) -> None:
-    self.piper.GripperCtrl(0, 0, GripperCode.DISABLE_AND_CLEAR_ERROR, 0)  # type: ignore
+    self.piper.GripperCtrl(
+        0,
+        0,
+        GripperCode.DISABLE_AND_CLEAR_ERROR,  # type: ignore
+        0,
+    )
 
   def standby(
       self,
@@ -821,7 +836,12 @@ class PiperInterface:
       effort = min(max(effort, 0.0), gripper_effort_max)
       effort_int = round(effort * 1e3)
 
-    self.piper.GripperCtrl(position_int, effort_int, GripperCode.ENABLE, 0)  # type: ignore
+    self.piper.GripperCtrl(
+        position_int,
+        effort_int,
+        GripperCode.ENABLE,  # type: ignore
+        0,
+    )
 
   def get_piper_interface_name(self) -> str:
     """Returns the name of the Piper interface."""
