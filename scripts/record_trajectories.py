@@ -20,18 +20,15 @@ import time
 import tty
 
 import numpy as np
+
 from piper_control import piper_control, piper_init, piper_interface
-from piper_control.gravity_compensation import (
-    GravityCompensationModel,
-    ModelType,
-)
+from piper_control.gravity_compensation import GravityCompensationModel, ModelType
 
 # pylint: disable=logging-fstring-interpolation,inconsistent-quotes
 
 RECORD_HZ = 100
 REPLAY_HZ = 100
 MOVE_DURATION = 1.0  # seconds
-GRIPPER_OPEN = piper_interface.GRIPPER_ANGLE_MAX
 GRIPPER_CLOSED = 0.0
 DEFAULT_KP_GAINS = np.array([5.0, 5.0, 5.0, 5.6, 20.0, 6.0])
 DEFAULT_KD_GAINS = np.array([0.8, 0.8, 0.8, 0.8, 0.8, 0.8])
@@ -210,7 +207,9 @@ def main():
       log.warning("Continuing without gravity compensation.")
 
   trajectory = []
-  gripper_positions = {name: GRIPPER_OPEN for name in robots}
+  gripper_positions = {
+      name: robot.gripper_angle_max for name, robot in robots.items()
+  }
   recording = False
   start_time = 0.0
   dt = 1.0 / RECORD_HZ
@@ -355,7 +354,7 @@ def main():
                 )
               else:
                 ctrl.command_joints(q.tolist())
-              robot.command_gripper(grip, piper_interface.GRIPPER_EFFORT_MAX)
+              robot.command_gripper(grip, robot.gripper_effort_max)
 
           # Flush any buffered keypresses from during replay
           termios.tcflush(sys.stdin.fileno(), termios.TCIFLUSH)
@@ -363,18 +362,16 @@ def main():
 
       elif key == "o":
         for name, robot in robots.items():
-          gripper_positions[name] = GRIPPER_OPEN
+          gripper_positions[name] = robot.gripper_angle_max
           robot.command_gripper(
-              GRIPPER_OPEN, piper_interface.GRIPPER_EFFORT_MAX
+              robot.gripper_angle_max, robot.gripper_effort_max
           )
         print("Grippers: OPEN")
 
       elif key == "c":
         for name, robot in robots.items():
           gripper_positions[name] = GRIPPER_CLOSED
-          robot.command_gripper(
-              GRIPPER_CLOSED, piper_interface.GRIPPER_EFFORT_MAX
-          )
+          robot.command_gripper(GRIPPER_CLOSED, robot.gripper_effort_max)
         print("Grippers: CLOSED")
 
       elif key == "s":

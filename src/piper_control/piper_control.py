@@ -313,8 +313,9 @@ class MitJointPositionController(JointPositionController):
     for ji, pos in enumerate(target):
 
       # Clip the position to limits so that we don't send invalid commands.
-      min_rad = pi.JOINT_LIMITS_RAD["min"][ji]
-      max_rad = pi.JOINT_LIMITS_RAD["max"][ji]
+      joint_limits = self.piper.joint_limits
+      min_rad = joint_limits["min"][ji]
+      max_rad = joint_limits["max"][ji]
       pos = min(max(pos, min_rad), max_rad)
 
       if self._joint_flip_map:
@@ -413,7 +414,7 @@ class GripperController(abc.ABC):
     self.stop()
 
   def command_open(self) -> None:
-    self.piper.command_gripper(position=pi.GRIPPER_ANGLE_MAX)
+    self.piper.command_gripper(position=self.piper.gripper_angle_max)
 
   def command_close(self) -> None:
     self.piper.command_gripper(position=0.0)
@@ -423,7 +424,7 @@ class GripperController(abc.ABC):
       target: float,
       effort: float = DEFAULT_GRIPPER_EFFORT,
   ) -> None:
-    target = np.clip(target, 0.0, pi.GRIPPER_ANGLE_MAX)
+    target = np.clip(target, 0.0, self.piper.gripper_angle_max)
     self.piper.command_gripper(position=target, effort=effort)
 
   def start(self) -> None:

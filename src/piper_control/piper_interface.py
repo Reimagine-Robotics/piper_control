@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import enum
 import time
+import warnings
 from collections.abc import Sequence
-from enum import IntEnum
-from typing import Literal, TypeGuard
+from typing import TYPE_CHECKING, Literal, TypeGuard
 
 import piper_sdk
 from packaging import version as packaging_version
@@ -13,17 +14,149 @@ from packaging import version as packaging_version
 # Global constants
 DEG_TO_RAD = 3.1415926 / 180.0
 RAD_TO_DEG = 1 / DEG_TO_RAD
-GRIPPER_ANGLE_MAX = 0.07  # 70mm
-GRIPPER_EFFORT_MAX = 2.0  # 2 Nm
 
 
-JOINT_LIMITS_RAD = {
+# There are different versions of the Piper arm and gripper with slightly
+# different limits. These constants are here for backward compatibility, but
+# will be removed in future versions.
+# TODO(araju): Remove deprecated variables in a future version.
+
+_JOINT_LIMITS_RAD = {
     "min": [-2.687, 0.0, -3.054, -1.850, -1.309, -1.745],
     "max": [2.687, 3.403, 0.0, 1.850, 1.309, 1.745],
 }
+_GRIPPER_ANGLE_MAX = 0.07  # 70mm
+_GRIPPER_EFFORT_MAX = 2.0  # 2 Nm
+
+if TYPE_CHECKING:
+  JOINT_LIMITS_RAD = _JOINT_LIMITS_RAD
+  GRIPPER_ANGLE_MAX = _GRIPPER_ANGLE_MAX
+  GRIPPER_EFFORT_MAX = _GRIPPER_EFFORT_MAX
 
 
-class EmergencyStop(IntEnum):
+def __getattr__(name: str) -> object:
+  if name == "JOINT_LIMITS_RAD":
+    warnings.warn(
+        "JOINT_LIMITS_RAD is deprecated; use get_joint_limits() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return _JOINT_LIMITS_RAD
+  if name == "GRIPPER_ANGLE_MAX":
+    warnings.warn(
+        "GRIPPER_ANGLE_MAX is deprecated; use get_gripper_angle_max() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return _GRIPPER_ANGLE_MAX
+  if name == "GRIPPER_EFFORT_MAX":
+    warnings.warn(
+        "GRIPPER_EFFORT_MAX is deprecated; use get_gripper_effort_max()"
+        " instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return _GRIPPER_EFFORT_MAX
+  raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+  return sorted(
+      list(globals().keys())
+      + ["JOINT_LIMITS_RAD", "GRIPPER_ANGLE_MAX", "GRIPPER_EFFORT_MAX"]
+  )
+
+
+class PiperArmType(enum.Enum):
+  """Different types of Piper arms."""
+
+  PIPER = "Piper"
+  PIPER_H = "Piper H"
+  PIPER_X = "Piper X"
+  PIPER_L = "Piper L"
+
+
+class PiperGripperType(enum.Enum):
+  """Different types of Piper grippers."""
+
+  V1 = "V1 7cm gripper"
+
+  # Most Pipers now ship with the V2 gripper.
+  V2 = "V2 7cm gripper"
+
+
+def get_joint_limits(
+    arm_type: PiperArmType = PiperArmType.PIPER,
+) -> dict[str, list[float]]:
+  """Returns the joint limits for the specified Piper arm type.
+
+  Args:
+    arm_type (PiperArmType): The type of Piper arm.
+  Returns:
+    dict[str, list[float]]: A dictionary with 'min' and 'max' keys containing
+    lists of joint limits in radians.
+  """
+  if arm_type == PiperArmType.PIPER:
+    return {
+        "min": [-2.687, 0.0, -3.054, -1.745, -1.309, -1.745],
+        "max": [2.687, 3.403, 0.0, 1.954, 1.309, 1.745],
+    }
+  elif arm_type == PiperArmType.PIPER_H:
+    return {
+        "min": [-2.687, 0.0, -3.054, -2.216, -1.570, -2.967],
+        "max": [2.687, 3.403, 0.0, 2.216, 1.570, -2.967],
+    }
+  elif arm_type == PiperArmType.PIPER_X:
+    return {
+        "min": [-2.687, 0.0, -3.054, -1.570, -1.570, -2.879],
+        "max": [2.687, 3.403, 0.0, 1.570, 1.570, 2.879],
+    }
+  elif arm_type == PiperArmType.PIPER_L:
+    return {
+        "min": [-2.687, 0.0, -3.054, -2.216, -1.570, -2.967],
+        "max": [2.687, 3.403, 0.0, 2.216, 1.570, -2.967],
+    }
+  else:
+    raise ValueError(f"Unknown Piper arm type: {arm_type}")
+
+
+def get_gripper_angle_max(
+    gripper_type: PiperGripperType = PiperGripperType.V2,
+) -> float:
+  """Returns the maximum gripper angle for the specified Piper gripper type.
+
+  Args:
+      gripper_type (PiperGripperType): The type of Piper gripper.
+  Returns:
+      float: The maximum gripper angle in meters.
+  """
+  if gripper_type == PiperGripperType.V1:
+    return 0.07  # 70mm
+  elif gripper_type == PiperGripperType.V2:
+    return 0.1  # 100mm
+  else:
+    raise ValueError(f"Unknown Piper gripper type: {gripper_type}")
+
+
+def get_gripper_effort_max(
+    gripper_type: PiperGripperType = PiperGripperType.V2,
+) -> float:
+  """Returns the maximum gripper effort for the specified Piper gripper type.
+
+  Args:
+    gripper_type (PiperGripperType): The type of Piper gripper.
+  Returns:
+    float: The maximum gripper effort in Nm.
+  """
+  if gripper_type == PiperGripperType.V1:
+    return 2.0
+  elif gripper_type == PiperGripperType.V2:
+    return 2.0
+  else:
+    raise ValueError(f"Unknown Piper gripper type: {gripper_type}")
+
+
+class EmergencyStop(enum.IntEnum):
   INVALID = 0x00
   STOP = 0x01
   RESUME = 0x02
@@ -36,7 +169,7 @@ def validate_emergency_stop(
 
 
 # https://github.com/agilexrobotics/piper_sdk/blob/4eddfcf817cd87de9acee316a72cf5b988025378/piper_msgs/msg_v2/feedback/arm_status.py#L108
-class ControlMode(IntEnum):
+class ControlMode(enum.IntEnum):
   STANDBY = 0x00
   CAN_COMMAND = 0x01
   TEACH_MODE = 0x02
@@ -64,7 +197,7 @@ def validate_control_mode(
   return mode in {0, 1, 3, 4, 7}
 
 
-class MoveMode(IntEnum):
+class MoveMode(enum.IntEnum):
   POSITION = 0x00
   JOINT = 0x01
   LINEAR = 0x02
@@ -87,7 +220,7 @@ def validate_move_mode(mode: MoveMode) -> TypeGuard[Literal[0, 1, 2, 3, 4]]:
   return mode in {0, 1, 2, 3, 4}
 
 
-class ArmController(IntEnum):
+class ArmController(enum.IntEnum):
   POSITION_VELOCITY = 0x00
   MIT = 0xAD
   INVALID = 0xFF
@@ -110,7 +243,7 @@ def validate_arm_controller(
   return controller in {0, 173, 255}
 
 
-class ArmStatus(IntEnum):
+class ArmStatus(enum.IntEnum):
   """The enum values correspond to the piper_sdk arm status codes found here.
 
   https://github.com/agilexrobotics/piper_sdk/blob/4eddfcf817cd87de9acee316a72cf5b988025378/piper_msgs/msg_v2/feedback/arm_status.py#L117
@@ -136,7 +269,7 @@ class ArmStatus(IntEnum):
 
 # The enum values correspond to the piper_sdk teach status codes found here:
 # https://github.com/agilexrobotics/piper_sdk/blob/4eddfcf817cd87de9acee316a72cf5b988025378/piper_msgs/msg_v2/feedback/arm_status.py#L140
-class TeachStatus(IntEnum):
+class TeachStatus(enum.IntEnum):
   OFF = 0x00
   START_RECORD = 0x01
   END_RECORD = 0x02
@@ -149,19 +282,19 @@ class TeachStatus(IntEnum):
 
 # The enum values correspond to the piper_sdk motion status codes found here:
 # https://github.com/agilexrobotics/piper_sdk/blob/4eddfcf817cd87de9acee316a72cf5b988025378/piper_msgs/msg_v2/feedback/arm_status.py#L149
-class MotionStatus(IntEnum):
+class MotionStatus(enum.IntEnum):
   REACHED_TARGET = 0x00
   NOT_YET_REACHED_TARGET = 0x01
 
 
-class GripperCode(IntEnum):
+class GripperCode(enum.IntEnum):
   DISABLE = 0x00
   ENABLE = 0x01
   DISABLE_AND_CLEAR_ERROR = 0x02
   ENABLE_AND_CLEAR_ERROR = 0x03
 
 
-class ArmInstallationPos(IntEnum):
+class ArmInstallationPos(enum.IntEnum):
   """Installation positions for the Piper arm.
 
   The enum values correspond to the piper_sdk codes can be found here:
@@ -204,6 +337,8 @@ class PiperInterface:
   def __init__(
       self,
       can_port: str = "can0",
+      piper_arm_type: PiperArmType = PiperArmType.PIPER,
+      piper_gripper_type: PiperGripperType = PiperGripperType.V2,
   ) -> None:
     """
     Initializes the PiperControl with a specified CAN port.
@@ -212,9 +347,26 @@ class PiperInterface:
       can_port (str): The CAN interface port name (e.g., "can0").
     """
     self.can_port = can_port
+    self._piper_arm_type = piper_arm_type
+    self._piper_gripper_type = piper_gripper_type
 
     self.piper = piper_sdk.C_PiperInterface_V2(can_name=can_port)
     self.piper.ConnectPort()
+
+  @property
+  def joint_limits(self) -> dict[str, list[float]]:
+    """Returns the joint limits for the current Piper arm type."""
+    return get_joint_limits(self._piper_arm_type)
+
+  @property
+  def gripper_angle_max(self) -> float:
+    """Returns the maximum gripper angle for the current Piper gripper type."""
+    return get_gripper_angle_max(self._piper_gripper_type)
+
+  @property
+  def gripper_effort_max(self) -> float:
+    """Returns the maximum gripper effort for the current Piper gripper type."""
+    return get_gripper_effort_max(self._piper_gripper_type)
 
   def set_installation_pos(
       self, installation_pos: ArmInstallationPos = ArmInstallationPos.UPRIGHT
@@ -492,13 +644,13 @@ class PiperInterface:
     self.piper.EnableArm(7)
 
   def enable_gripper(self) -> None:
-    self.piper.GripperCtrl(0, 0, GripperCode.ENABLE, 0)
+    self.piper.GripperCtrl(0, 0, GripperCode.ENABLE, 0)  # type: ignore
 
   def disable_arm(self) -> None:
     self.piper.DisableArm(7)
 
   def disable_gripper(self) -> None:
-    self.piper.GripperCtrl(0, 0, GripperCode.DISABLE_AND_CLEAR_ERROR, 0)
+    self.piper.GripperCtrl(0, 0, GripperCode.DISABLE_AND_CLEAR_ERROR, 0)  # type: ignore
 
   def standby(
       self,
@@ -515,7 +667,7 @@ class PiperInterface:
       raise ValueError(f"Invalid arm controller: {arm_controller}")
 
     self.piper.MotionCtrl_2(
-        ControlMode.STANDBY,
+        ControlMode.STANDBY,  # type: ignore
         move_mode,
         0,
         arm_controller,
@@ -563,9 +715,13 @@ class PiperInterface:
     """
 
     joint_angles = []
+    joint_limits = get_joint_limits(self._piper_arm_type)
 
     for i, pos in enumerate(positions):
-      min_rad, max_rad = JOINT_LIMITS_RAD["min"][i], JOINT_LIMITS_RAD["max"][i]
+      min_rad, max_rad = (
+          joint_limits["min"][i],
+          joint_limits["max"][i],
+      )
       clipped_pos = min(max(pos, min_rad), max_rad)
       pos_deg = clipped_pos * RAD_TO_DEG
       joint_angle = round(pos_deg * 1e3)  # Convert to millidegrees
@@ -646,24 +802,26 @@ class PiperInterface:
 
     Args:
       position (float | None): The desired position of the gripper in meters.
-        Must be between 0.0 and GRIPPER_ANGLE_MAX. If None, the position is not
-        updated.
+        Clipped to be between 0.0 and the max gripper angle. If None, the
+        position is not updated.
       effort (float | None): The desired effort (force) for the gripper.
-        Must be between 0.0 and GRIPPER_EFFORT_MAX. If None, the effort is not
-        updated.
+        Clipped to be between 0.0 and the max gripper effort. If None, the
+        effort is not updated.
 
     Returns:
       None
     """
     position_int = effort_int = 0
     if position is not None:
-      position = min(max(position, 0.0), GRIPPER_ANGLE_MAX)
+      gripper_angle_max = get_gripper_angle_max(self._piper_gripper_type)
+      position = min(max(position, 0.0), gripper_angle_max)
       position_int = round(position * 1e6)
     if effort is not None:
-      effort = min(max(effort, 0.0), GRIPPER_EFFORT_MAX)
+      gripper_effort_max = get_gripper_effort_max(self._piper_gripper_type)
+      effort = min(max(effort, 0.0), gripper_effort_max)
       effort_int = round(effort * 1e3)
 
-    self.piper.GripperCtrl(position_int, effort_int, GripperCode.ENABLE, 0)
+    self.piper.GripperCtrl(position_int, effort_int, GripperCode.ENABLE, 0)  # type: ignore
 
   def get_piper_interface_name(self) -> str:
     """Returns the name of the Piper interface."""
