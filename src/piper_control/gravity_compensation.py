@@ -93,9 +93,9 @@ class GravityCompensationModel:
 
   def __init__(
       self,
-      samples_path: str | pathlib.Path,
+      samples_path: str | pathlib.Path | None = None,
       model_path: str | pathlib.Path | None = None,
-      model_type: ModelType = ModelType.QUADRATIC,
+      model_type: ModelType = ModelType.DIRECT,
       joint_names: Sequence[str] = DEFAULT_JOINT_NAMES,
   ):
     model_path = model_path or get_default_model_path()
@@ -108,7 +108,14 @@ class GravityCompensationModel:
     self.qpos_indices = self._model.jnt_qposadr[joint_indices]
     self.qvel_indices = self._model.jnt_dofadr[joint_indices]
 
-    self._fit_model(samples_path)
+    if model_type is not ModelType.DIRECT:
+      if not samples_path:
+        raise ValueError(
+            "samples_path must be provided for non-direct model types."
+        )
+      self._fit_model(samples_path)
+    else:
+      self._setup_direct_model()
 
   def _fit_model(self, samples_path: str | pathlib.Path) -> None:
     log.info(f"Loading samples from {samples_path}")
@@ -139,8 +146,6 @@ class GravityCompensationModel:
       self._fit_polynomial_model(_cubic_gravity_tau, mj_tau, tau)
     elif self._model_type == ModelType.FEATURES:
       self._fit_feature_model(mj_tau, tau, qpos)
-    elif self._model_type == ModelType.DIRECT:
-      self._setup_direct_model()
     else:
       raise ValueError(f"Unknown model type: {self._model_type}")
 
