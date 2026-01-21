@@ -103,6 +103,7 @@ class GravityCompensationModel:
     self._data = mj.MjData(self._model)
     self._model_type = model_type
     self._joint_names = tuple(joint_names)
+    self.gravity_models: dict = {}
 
     joint_indices = [self._model.joint(name).id for name in self._joint_names]
     self.qpos_indices = self._model.jnt_qposadr[joint_indices]
@@ -134,7 +135,6 @@ class GravityCompensationModel:
     log.info(
         f"Fitting gravity compensation model using {self._model_type.value}..."
     )
-    self.gravity_models: dict = {}
 
     if self._model_type == ModelType.LINEAR:
       self._fit_polynomial_model(_linear_gravity_tau, mj_tau, tau)
