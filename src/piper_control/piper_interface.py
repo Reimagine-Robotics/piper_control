@@ -479,13 +479,14 @@ class PiperInterface:
     Returns:
       Sequence[float]: Joint positions in radians.
     """
+    joint_state = self.piper.GetArmJointMsgs().joint_state
     raw_positions = [
-        self.piper.GetArmJointMsgs().joint_state.joint_1,
-        self.piper.GetArmJointMsgs().joint_state.joint_2,
-        self.piper.GetArmJointMsgs().joint_state.joint_3,
-        self.piper.GetArmJointMsgs().joint_state.joint_4,
-        self.piper.GetArmJointMsgs().joint_state.joint_5,
-        self.piper.GetArmJointMsgs().joint_state.joint_6,
+        joint_state.joint_1,
+        joint_state.joint_2,
+        joint_state.joint_3,
+        joint_state.joint_4,
+        joint_state.joint_5,
+        joint_state.joint_6,
     ]
 
     # API reports positions in milli-degrees. Convert to radians.
@@ -498,13 +499,14 @@ class PiperInterface:
     Returns:
       Sequence[float]: Joint velocities in radians per second.
     """
+    motor_info = self.piper.GetArmHighSpdInfoMsgs()
     raw_speeds = [
-        self.piper.GetArmHighSpdInfoMsgs().motor_1.motor_speed,
-        self.piper.GetArmHighSpdInfoMsgs().motor_2.motor_speed,
-        self.piper.GetArmHighSpdInfoMsgs().motor_3.motor_speed,
-        self.piper.GetArmHighSpdInfoMsgs().motor_4.motor_speed,
-        self.piper.GetArmHighSpdInfoMsgs().motor_5.motor_speed,
-        self.piper.GetArmHighSpdInfoMsgs().motor_6.motor_speed,
+        motor_info.motor_1.motor_speed,
+        motor_info.motor_2.motor_speed,
+        motor_info.motor_3.motor_speed,
+        motor_info.motor_4.motor_speed,
+        motor_info.motor_5.motor_speed,
+        motor_info.motor_6.motor_speed,
     ]
 
     # API reports speeds in milli-degrees. Convert to radians.
@@ -517,13 +519,14 @@ class PiperInterface:
     Returns:
       Sequence[float]: Joint efforts in Nm.
     """
+    motor_info = self.piper.GetArmHighSpdInfoMsgs()
     return [
-        self.piper.GetArmHighSpdInfoMsgs().motor_1.effort / 1e3,
-        self.piper.GetArmHighSpdInfoMsgs().motor_2.effort / 1e3,
-        self.piper.GetArmHighSpdInfoMsgs().motor_3.effort / 1e3,
-        self.piper.GetArmHighSpdInfoMsgs().motor_4.effort / 1e3,
-        self.piper.GetArmHighSpdInfoMsgs().motor_5.effort / 1e3,
-        self.piper.GetArmHighSpdInfoMsgs().motor_6.effort / 1e3,
+        motor_info.motor_1.effort / 1e3,
+        motor_info.motor_2.effort / 1e3,
+        motor_info.motor_3.effort / 1e3,
+        motor_info.motor_4.effort / 1e3,
+        motor_info.motor_5.effort / 1e3,
+        motor_info.motor_6.effort / 1e3,
     ]
 
   def get_gripper_state(self) -> tuple[float, float]:
