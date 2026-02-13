@@ -92,7 +92,7 @@ class PiperGripperType(enum.Enum):
   V1 = "V1 7cm gripper"
 
   # Most Pipers now ship with the V2 gripper.
-  V2 = "V2 7cm gripper"
+  V2 = "V2 10cm gripper"
 
 
 def get_joint_limits(
@@ -654,7 +654,10 @@ class PiperInterface:
     self.piper.EnableArm(7)
 
   def enable_gripper(self) -> None:
-    self.piper.GripperCtrl(0, 0, GripperCode.ENABLE, 0)  # type: ignore
+    gripper_status = self.get_gripper_status()
+    raw_angle = gripper_status.gripper_state.grippers_angle
+    # Enable the gripper without moving it to a new angle.
+    self.piper.GripperCtrl(raw_angle, 0, GripperCode.ENABLE, 0)  # type: ignore
 
   def disable_arm(self) -> None:
     self.piper.DisableArm(7)
