@@ -6,12 +6,7 @@ python3 scripts/simple_move.py
 
 import time
 
-from piper_control import (
-    piper_connect,
-    piper_control,
-    piper_init,
-    piper_interface,
-)
+from piper_control import piper_connect, piper_control, piper_init, piper_interface
 
 
 def main():
@@ -76,6 +71,9 @@ def main():
   print("WARNING: the arm will power off and drop.")
 
   piper_init.disable_arm(robot)
+  piper_init.disable_gripper(robot)
+  time.sleep(0.5)
+  print("done disabling. exiting.")
 
 
 if __name__ == "__main__":
