@@ -651,7 +651,17 @@ class PiperInterface:
     return self.is_arm_enabled() and self.is_gripper_enabled()
 
   def enable_arm(self) -> None:
-    self.piper.EnableArm(7)
+    # Enable each motor individually.
+    # When calling EnableArm(7), it enables both the arm joints AND the gripper,
+    # which by default moves the gripper. To avoid unexpected gripper movement,
+    # we enable each motor separately. To enable the gripper, call
+    # enable_gripper() separately.
+    self.piper.EnableArm(1)
+    self.piper.EnableArm(2)
+    self.piper.EnableArm(3)
+    self.piper.EnableArm(4)
+    self.piper.EnableArm(5)
+    self.piper.EnableArm(6)
 
   def enable_gripper(self) -> None:
     gripper_status = self.get_gripper_status()
