@@ -552,34 +552,26 @@ class PiperInterface:
         for i in range(6)
     ]
 
-  def show_status(self, arm_status=None) -> None:
-    """
-    Prints a human friendly status of the arm and gripper.
-
-    Args:
-      arm_status: Optional arm status to display. If None, the current status
-        will be fetched from the robot.
-    """
+  def format_status(self) -> str:
+    """Returns a human-friendly status string for the arm and gripper."""
     error_names = {False: "OK", True: "ERROR"}
+    lines: list[str] = []
 
     arm_status = self.get_arm_status()
-    print("Arm Status:")
-    print(f"ctrl_mode: {ControlMode(arm_status.arm_status.ctrl_mode).name}")
-    print(f"arm_status: {ArmStatus(arm_status.arm_status.arm_status).name}")
-    print(f"mode_feed: {MoveMode(arm_status.arm_status.mode_feed).name}")
-    print(f"teach_mode: {TeachStatus(arm_status.arm_status.teach_status).name}")
-    print(
-        "motion_status:"
-        f" {MotionStatus(arm_status.arm_status.motion_status).name}"
-    )
-    print(f"trajectory_num: {arm_status.arm_status.trajectory_num}")
-    print(f"err_code: {arm_status.arm_status.err_code}")
+    s = arm_status.arm_status
+    lines.append("Arm Status:")
+    lines.append(f"ctrl_mode: {ControlMode(s.ctrl_mode).name}")
+    lines.append(f"arm_status: {ArmStatus(s.arm_status).name}")
+    lines.append(f"mode_feed: {MoveMode(s.mode_feed).name}")
+    lines.append(f"teach_mode: {TeachStatus(s.teach_status).name}")
+    lines.append(f"motion_status: {MotionStatus(s.motion_status).name}")
+    lines.append(f"trajectory_num: {s.trajectory_num}")
+    lines.append(f"err_code: {s.err_code}")
 
     # https://github.com/agilexrobotics/piper_sdk/blob/4eddfcf817cd87de9acee316a72cf5b988025378/piper_msgs/msg_v2/feedback/arm_status.py#L228
     # Decoding err_code manually here because afaict the setter is not used to
     # update the err_status
-    err_code = arm_status.arm_status.err_code
-    print(f"err_code binary: {err_code:#018b}")
+    err_code = s.err_code
     comms_errors = [bool(err_code & (1 << b)) for b in range(6)]
     limit_errors = [bool(err_code & (1 << (b + 8))) for b in range(6)]
     motor_errors = self.get_motor_errors()
@@ -588,35 +580,38 @@ class PiperInterface:
       limit = limit_errors[i]
       comms = comms_errors[i]
       motor = motor_errors[i]
-      print(
+      lines.append(
           f"  Joint {i+1}:"
           f" limit={error_names[limit]}"
           f" comms={error_names[comms]}"
           f" motor={error_names[motor]}"
       )
-      if error_names[motor] == "ERROR":
+      if motor:
         foc_status = getattr(arm_msgs, f"motor_{i + 1}").foc_status
-        print(f"    foc_status: {foc_status}")
+        lines.append(f"    foc_status: {foc_status}")
 
     gripper_status = self.get_gripper_status()
-    print("\nGripper Status:")
-    foc_status = gripper_status.gripper_state.foc_status
-    print(f"  voltage_too_low     : {error_names[foc_status.voltage_too_low]}")
-    print(
-        f"  motor_overheating   : {error_names[foc_status.motor_overheating]}"
+    foc = gripper_status.gripper_state.foc_status
+    lines.append("\nGripper Status:")
+    lines.append(f"  voltage_too_low     : {error_names[foc.voltage_too_low]}")
+    lines.append(f"  motor_overheating   : {error_names[foc.motor_overheating]}")
+    lines.append(
+        f"  driver_overcurrent  : {error_names[foc.driver_overcurrent]}"
     )
-    print(
-        f"  driver_overcurrent  : {error_names[foc_status.driver_overcurrent]}"
+    lines.append(
+        f"  driver_overheating  : {error_names[foc.driver_overheating]}"
     )
-    print(
-        f"  driver_overheating  : {error_names[foc_status.driver_overheating]}"
+    lines.append(f"  sensor_status       : {error_names[foc.sensor_status]}")
+    lines.append(
+        f"  driver_error_status : {error_names[foc.driver_error_status]}"
     )
-    print(f"  sensor_status       : {error_names[foc_status.sensor_status]}")
-    print(
-        f"  driver_error_status : {error_names[foc_status.driver_error_status]}"
-    )
-    print(f"  driver_enable_status: {foc_status.driver_enable_status}")
-    print(f"  homing_status       : {error_names[foc_status.homing_status]}")
+    lines.append(f"  driver_enable_status: {foc.driver_enable_status}")
+    lines.append(f"  homing_status       : {error_names[foc.homing_status]}")
+    return "\n".join(lines)
+
+  def show_status(self) -> None:
+    """Prints a human-friendly status of the arm and gripper."""
+    print(self.format_status())
 
   def is_gripper_enabled(self) -> bool:
     """
