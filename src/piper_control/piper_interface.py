@@ -579,6 +579,7 @@ class PiperInterface:
     # Decoding err_code manually here because afaict the setter is not used to
     # update the err_status
     err_code = arm_status.arm_status.err_code
+    print(f"err_code binary: {err_code:#018b}")
     comms_errors = [bool(err_code & (1 << b)) for b in range(6)]
     limit_errors = [bool(err_code & (1 << (b + 8))) for b in range(6)]
     motor_errors = self.get_motor_errors()
