@@ -594,7 +594,9 @@ class PiperInterface:
     foc = gripper_status.gripper_state.foc_status
     lines.append("\nGripper Status:")
     lines.append(f"  voltage_too_low     : {error_names[foc.voltage_too_low]}")
-    lines.append(f"  motor_overheating   : {error_names[foc.motor_overheating]}")
+    lines.append(
+        f"  motor_overheating   : {error_names[foc.motor_overheating]}"
+    )
     lines.append(
         f"  driver_overcurrent  : {error_names[foc.driver_overcurrent]}"
     )
