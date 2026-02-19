@@ -52,7 +52,7 @@ def main():
   piper = piper_interface.PiperInterface(args.can_port)
   piper.show_status()
   firmware_version = piper.get_piper_firmware_version()
-  log.info(f"Firmware version: {firmware_version}")
+  log.info("Firmware version: %s", firmware_version)
 
   log.info("Loading gravity compensation model...")
   grav_model = GravityCompensationModel(
