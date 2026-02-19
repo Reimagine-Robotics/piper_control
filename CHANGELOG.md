@@ -2,10 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## [1.3.5]
 
--   Add utility method for getting the serial number of a USB can adapter.
--   Allow moving specific joints using MIT mode.
+-   Fix swapped limit/comms error bits in status calculation error code decoding.
+-   Don't move the gripper when the arm enables.
+
+## [1.3.2]
+
+-   Default gravity model to direct mode, which doesn't require samples.
+-   Minor bugfix in gravity compensation script.
 
 ## [1.3.0]
 
