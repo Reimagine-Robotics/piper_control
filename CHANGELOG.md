@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.6]
+
+-   Fix sign error in joint 6 max limit for Piper H and L.
+-   Only apply J1-3 command scaling (0.25) for firmware older than 1.8.
+
 ## [1.3.5]
 
 -   Fix swapped limit/comms error bits in status calculation error code decoding.
