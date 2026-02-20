@@ -48,17 +48,20 @@ def main():
 
   model_type = ModelType(args.model_type)
 
+  log.info("Connecting to Piper robot...")
+  piper = piper_interface.PiperInterface(args.can_port)
+  piper.show_status()
+  firmware_version = piper.get_piper_firmware_version()
+  log.info("Firmware version: %s", firmware_version)
+
   log.info("Loading gravity compensation model...")
   grav_model = GravityCompensationModel(
       samples_path=args.samples_path,
       model_path=args.model_path,
       model_type=model_type,
       joint_names=args.joint_names,
+      firmware_version=firmware_version,
   )
-
-  log.info("Connecting to Piper robot...")
-  piper = piper_interface.PiperInterface(args.can_port)
-  piper.show_status()
 
   piper.set_installation_pos(piper_interface.ArmInstallationPos.UPRIGHT)
   piper_init.reset_arm(
