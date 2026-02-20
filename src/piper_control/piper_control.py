@@ -378,7 +378,7 @@ class MitJointPositionController(JointPositionController):
     step_idx = 0
     start_time = time.time()
     while time.time() - start_time < timeout:
-      if step_idx > len(p_gains):
+      if step_idx > len(p_gains) - 1:
         p_gain = p_gains[-1]
       else:
         p_gain = p_gains[step_idx]
