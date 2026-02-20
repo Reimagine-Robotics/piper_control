@@ -114,7 +114,7 @@ def get_joint_limits(
   elif arm_type == PiperArmType.PIPER_H:
     return {
         "min": [-2.687, 0.0, -3.054, -2.216, -1.570, -2.967],
-        "max": [2.687, 3.403, 0.0, 2.216, 1.570, -2.967],
+        "max": [2.687, 3.403, 0.0, 2.216, 1.570, 2.967],
     }
   elif arm_type == PiperArmType.PIPER_X:
     return {
@@ -124,7 +124,7 @@ def get_joint_limits(
   elif arm_type == PiperArmType.PIPER_L:
     return {
         "min": [-2.687, 0.0, -3.054, -2.216, -1.570, -2.967],
-        "max": [2.687, 3.403, 0.0, 2.216, 1.570, -2.967],
+        "max": [2.687, 3.403, 0.0, 2.216, 1.570, 2.967],
     }
   else:
     raise ValueError(f"Unknown Piper arm type: {arm_type}")
