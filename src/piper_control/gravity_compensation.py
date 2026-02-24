@@ -42,13 +42,16 @@ def _direct_scaling_factors(
 
   Firmware versions older than 1.8 amplify J1-3 commands by 4x internally,
   so we divide by 4 before sending. Newer firmware does not amplify.
+
+  When firmware_version is None (unknown), the old-firmware scaling is applied
+  as the safe default to avoid sending 4x stronger torques.
   """
   if (
       firmware_version is not None
-      and firmware_version < packaging_version.Version("1.8")
+      and firmware_version >= packaging_version.Version("1.8")
   ):
-    return (0.25, 0.25, 0.25, 1.0, 1.0, 1.0)
-  return (1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+    return (1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+  return (0.25, 0.25, 0.25, 1.0, 1.0, 1.0)
 
 
 def _linear_gravity_tau(tau, a):
