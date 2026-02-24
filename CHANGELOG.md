@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.7]
+
+-   Default to old-firmware J1-3 scaling when firmware version is unknown for
+    backward compatibility.
+
 ## [1.3.6]
 
 -   Fix sign error in joint 6 max limit for Piper H and L.
