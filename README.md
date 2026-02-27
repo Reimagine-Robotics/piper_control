@@ -218,6 +218,12 @@ udev rule that sets the bitrate and desired name for your CAN adapter.
     sudo .venv/bin/piper-generate-udev-rule -i can0 -b 1000000
     ```
 
+    Or run it directly from the repo (without installing):
+
+    ```bash
+    sudo ./scripts/piper-generate-udev-rule -i can0 -b 1000000
+    ```
+
     Or name your robot (e.g. myrobot):
 
     ```bash
