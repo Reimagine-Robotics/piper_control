@@ -372,25 +372,17 @@ class MitJointPositionController(JointPositionController):
   ) -> bool:
     assert len(target) == 6
 
-    ramp_steps = 400  # 2 seconds
+    ramp_steps = int(round(timeout * _CONTROL_RATE))
     p_gains = np.geomspace(0.5, 5.0, ramp_steps)
 
-    step_idx = 0
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-      if step_idx > len(p_gains) - 1:
-        p_gain = p_gains[-1]
-      else:
-        p_gain = p_gains[step_idx]
-
-      self.command_joints(target, kp_gains=[p_gain] * 6)
+    for step_idx in range(ramp_steps):
+      self.command_joints(target, kp_gains=[p_gains[step_idx]] * 6)
       cur_joints = self.piper.get_joint_positions()
 
       if _joints_within_target_threshold(cur_joints, target, threshold):
         return True
 
       time.sleep(1.0 / _CONTROL_RATE)
-      step_idx += 1
 
     return False
 
