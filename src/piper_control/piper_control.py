@@ -296,7 +296,6 @@ class MitJointPositionController(JointPositionController):
       kd_gains: Sequence[float] | None = None,
       torques_ff: Sequence[float] | None = None,
       target_vel: Sequence[float] | None = None,
-
   ) -> None:
     if kp_gains is None or len(kp_gains) == 0:
       kp_gains = self._kp_gains
