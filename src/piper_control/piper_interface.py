@@ -542,6 +542,7 @@ class PiperInterface:
         arm_msgs.motor_6.effort / 1e3,
     ]
 
+
   def get_gripper_state(self) -> tuple[float, float]:
     """
     Returns the current gripper state as a tuple of angle and effort.
@@ -778,6 +779,7 @@ class PiperInterface:
       kp: float,
       kd: float,
       torque_ff: float,
+      velocity: float = 0.0,
   ) -> None:
     """
     Commands a joint via MIT control to move to a given angle.
@@ -791,10 +793,11 @@ class PiperInterface:
       kp (float): Proportional gain.
       kd (float): Derivative gain.
       torque_ff (float): Feedforward torque in Nm.
+      velocity (float): Joint velocity in rad/s. Default to 0.0.
     """
     assert motor_idx >= 0 and motor_idx <= 5
 
-    self.piper.JointMitCtrl(motor_idx + 1, position, 0.0, kp, kd, torque_ff)
+    self.piper.JointMitCtrl(motor_idx + 1, position, velocity, kp, kd, torque_ff)
 
   def command_joint_torque_mit(
       self,
