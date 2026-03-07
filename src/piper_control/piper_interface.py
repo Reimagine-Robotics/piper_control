@@ -961,9 +961,9 @@ class PiperInterface:
         - 1-8: Increasing detection thresholds
     """
     self.piper.ArmParamEnquiryAndConfig(0x02, 0x00, 0x00, 0x00, 0x03)
+    time.sleep(0.01) # Add a small delay to let piper_sdk thread update the variable __feedback_crash_protection_level 
     feedback = self.piper.GetCrashProtectionLevelFeedback()
     rating = feedback.crash_protection_level_feedback
-
     return [
         rating.joint_1_protection_level,
         rating.joint_2_protection_level,
