@@ -295,20 +295,25 @@ class MitJointPositionController(JointPositionController):
       kp_gains: Sequence[float] | None = None,
       kd_gains: Sequence[float] | None = None,
       torques_ff: Sequence[float] | None = None,
+      velocities: Sequence[float] | None = None,
   ) -> None:
-    if not kp_gains:
+    if kp_gains is None or len(kp_gains) == 0:
       kp_gains = self._kp_gains
 
-    if not kd_gains:
+    if kd_gains is None or len(kd_gains) == 0:
       kd_gains = self._kd_gains
 
-    if not torques_ff:
+    if torques_ff is None or len(torques_ff) == 0:
       torques_ff = (0.0,) * 6
+
+    if velocities is None or len(velocities) == 0:
+      velocities = (0.0,) * 6
 
     assert len(target) == 6
     assert len(kp_gains) == 6
     assert len(kd_gains) == 6
     assert len(torques_ff) == 6
+    assert len(velocities) == 6
 
     for ji, pos in enumerate(target):
 
@@ -328,8 +333,17 @@ class MitJointPositionController(JointPositionController):
           torque_ff, -_MIT_TORQUE_LIMITS[ji], _MIT_TORQUE_LIMITS[ji]
       )
 
+      velocity = velocities[ji]
+      if self._joint_flip_map:
+        velocity = -velocity if self._joint_flip_map[ji] else velocity
+
       self._piper.command_joint_position_mit(
-          ji, pos, kp_gains[ji], kd_gains[ji], torque_ff
+          motor_idx=ji,
+          position=pos,
+          kp=kp_gains[ji],
+          kd=kd_gains[ji],
+          torque_ff=torque_ff,
+          velocity=velocity,
       )
 
   def relax_joints(self, timeout: float) -> None:
