@@ -522,8 +522,8 @@ class PiperInterface:
         arm_msgs.motor_6.motor_speed,
     ]
 
-    # API reports speeds in milli-degrees. Convert to radians.
-    return [speed / 1e3 * DEG_TO_RAD for speed in raw_speeds]
+    # API reports speeds in milli-radian/s. Convert to radian/s.
+    return [speed / 1e3 for speed in raw_speeds]
 
   def get_joint_efforts(self) -> list[float]:
     """
