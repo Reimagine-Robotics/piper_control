@@ -774,11 +774,12 @@ class PiperInterface:
   def command_joint_position_mit(
       self,
       motor_idx: int,
+      *,
       position: float,
       kp: float,
       kd: float,
       torque_ff: float,
-      velocity: float = 0.0,
+      velocity: float,
   ) -> None:
     """
     Commands a joint via MIT control to move to a given angle.
