@@ -793,7 +793,7 @@ class PiperInterface:
       kp (float): Proportional gain.
       kd (float): Derivative gain.
       torque_ff (float): Feedforward torque in Nm.
-      velocity (float): Joint velocity in rad/s. Default to 0.0.
+      velocity (float): Joint velocity in rad/s.
     """
     assert motor_idx >= 0 and motor_idx <= 5
 
