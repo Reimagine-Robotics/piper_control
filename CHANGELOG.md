@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0]
+
+-   Add target velocity to MIT control interface.
+-   Fix `get_joint_velocities` unit conversion.
+-   Make udev rule script accessible via `pip install` entry point.
+-   Fix `step_idx` IndexError in trajectory playback.
+-   Add `set_gripper_zero_position` method to re-zero the gripper.
+-   Reduce lock contention by aggregating message queries.
+
 ## [1.3.7]
 
 -   Default to old-firmware J1-3 scaling when firmware version is unknown for
