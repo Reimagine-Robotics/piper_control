@@ -46,8 +46,6 @@ def main():
   )
   args = parser.parse_args()
 
-  model_type = ModelType(args.model_type)
-
   log.info("Connecting to Piper robot...")
   piper = piper_interface.PiperInterface(args.can_port)
   piper.show_status()
@@ -56,9 +54,7 @@ def main():
 
   log.info("Loading gravity compensation model...")
   grav_model = GravityCompensationModel(
-      samples_path=args.samples_path,
       model_path=args.model_path,
-      model_type=model_type,
       joint_names=args.joint_names,
       firmware_version=firmware_version,
   )

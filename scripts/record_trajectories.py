@@ -4,9 +4,9 @@ Single interactive mode with keyboard controls for recording and replaying.
 Prompts for filenames when saving/loading. Supports 1 or 2 arms.
 
 Usage:
-  python record_trajectories.py --robots can0 --samples-path samples.npz
+  python record_trajectories.py --robots can0
   python record_trajectories.py \\
-    --robots can0 can1 --samples-path samples.npz --model-path path/to/model.xml
+    --robots can0 can1 --model-path path/to/model.xml
 """
 
 import argparse
@@ -20,6 +20,7 @@ import time
 import tty
 
 import numpy as np
+
 from piper_control import piper_control, piper_init, piper_interface
 from piper_control.gravity_compensation import (
     GravityCompensationModel,
@@ -119,11 +120,6 @@ def main():
       help="Enable gravity compensation during replay",
   )
   parser.add_argument(
-      "--samples-path",
-      type=pathlib.Path,
-      help="Path to the gravity compensation samples (.npz).",
-  )
-  parser.add_argument(
       "--model-path",
       type=pathlib.Path,
       default=DEFAULT_MODEL_PATH,
@@ -163,9 +159,6 @@ def main():
   )
   args = parser.parse_args()
 
-  if args.gravity and not args.samples_path:
-    parser.error("--samples-path is required when --gravity is enabled")
-
   assert len(args.robots) <= 2, "Maximum 2 robots supported"
 
   # Connect to robots
@@ -185,23 +178,12 @@ def main():
 
   # Load gravity compensation model
   gravity_model = None
-  samples_path = (
-      pathlib.Path(args.samples_path).expanduser()
-      if args.samples_path
-      else None
-  )
   model_path = pathlib.Path(args.model_path).expanduser()
-  model_type = ModelType(args.model_type)
   if args.gravity:
-    assert (
-        samples_path is not None
-    ), "--samples-path is required for gravity compensation"
     try:
       log.info("Loading gravity compensation model...")
       gravity_model = GravityCompensationModel(
-          samples_path=samples_path,
           model_path=model_path,
-          model_type=model_type,
       )
       log.info("Gravity compensation enabled.")
     except Exception as e:  # pylint: disable=broad-except
