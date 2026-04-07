@@ -12,7 +12,6 @@ from piper_control import piper_control, piper_init, piper_interface
 from piper_control.gravity_compensation import (
     DEFAULT_JOINT_NAMES,
     GravityCompensationModel,
-    ModelType,
     get_default_model_path,
 )
 
@@ -35,13 +34,13 @@ def main():
       help="Joint names in the model",
   )
   parser.add_argument("--can-port", default="can0")
-  parser.add_argument(
-      "--model-type", default="cubic", choices=[t.value for t in ModelType]
-  )
+  # The original value of 1.0 was tuned when
+  # get_joint_velocities() had a ~57x scaling bug (piper_control#68).
+  # 1/57 ≈ 0.018 restores the original effective damping.
   parser.add_argument(
       "--damping",
       type=float,
-      default=1.0,
+      default=0.018,
       help="Velocity damping gain for stability",
   )
   args = parser.parse_args()
