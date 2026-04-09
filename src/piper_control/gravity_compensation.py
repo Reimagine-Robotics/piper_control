@@ -21,8 +21,8 @@ DEFAULT_JOINT_NAMES = (
 )
 
 
-def _direct_scaling_factors(
-    firmware_version: packaging_version.Version | None,
+def direct_scaling_factors(
+    firmware_version: str | None,
 ) -> tuple[float, ...]:
   """Return per-joint command scaling factors for the given firmware.
 
@@ -32,10 +32,12 @@ def _direct_scaling_factors(
   When firmware_version is None (unknown), the old-firmware scaling is applied
   as the safe default to avoid sending 4x stronger torques.
   """
-  if (
-      firmware_version is not None
-      and firmware_version >= packaging_version.Version("1.8")
-  ):
+  parsed = (
+      packaging_version.parse(firmware_version) if firmware_version else None
+  )
+  # firmware <= 1.8.post2 amplifies J1-3 commands by 4x internally.
+  # https://github.com/agilexrobotics/piper_sdk/blob/master/asserts/Q%26A.MD#32-sdk-to-obtain-motor-feedback-torque
+  if parsed is not None and parsed > packaging_version.Version("1.8.post2"):
     return (1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
   return (0.25, 0.25, 0.25, 1.0, 1.0, 1.0)
 
@@ -53,9 +55,7 @@ class GravityCompensationModel:
     self._model = mj.MjModel.from_xml_path(str(model_path))
     self._data = mj.MjData(self._model)
     self._joint_names = tuple(joint_names)
-    self._firmware_version = (
-        packaging_version.parse(firmware_version) if firmware_version else None
-    )
+    self._firmware_version = firmware_version
     self.gravity_models: dict = {}
 
     joint_indices = [self._model.joint(name).id for name in self._joint_names]
@@ -65,7 +65,7 @@ class GravityCompensationModel:
     self._setup_direct_model()
 
   def _setup_direct_model(self) -> None:
-    scaling = _direct_scaling_factors(self._firmware_version)
+    scaling = direct_scaling_factors(self._firmware_version)
     for joint_idx, joint_name in enumerate(self._joint_names):
       scale = scaling[joint_idx]
       self.gravity_models[joint_name] = lambda x, s=scale: x * s
