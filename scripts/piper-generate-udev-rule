@@ -126,6 +126,10 @@ if [ -z "$VENDOR" ] || [ -z "$PRODUCT" ] || [ -z "$SERIAL" ]; then
   Serial: ${SERIAL:-NOT FOUND}"
 fi
 
+# Generate a unique rule identifier from the serial for the udev rule filename
+SERIAL_SUFFIX=$(echo "$SERIAL" | tr -cd 'a-zA-Z0-9' | tr '[:upper:]' '[:lower:]')
+RULE_ID="${DESIRED_NAME}-${SERIAL_SUFFIX}"
+
 # Generate udev rule content with conditional NAME attribute
 info "Creating rule with vendor, product, and serial for unique identification"
 if [ "$RENAME_INTERFACE" = true ]; then
@@ -134,8 +138,8 @@ else
     UDEV_RULE="SUBSYSTEM==\"net\", ATTRS{idVendor}==\"$VENDOR\", ATTRS{idProduct}==\"$PRODUCT\", ATTRS{serial}==\"$SERIAL\", ACTION==\"add\", RUN+=\"/bin/sh -c 'ip link set \$env{INTERFACE} down; ip link set \$env{INTERFACE} type can bitrate $BITRATE; ip link set \$env{INTERFACE} up'\""
 fi
 
-# Define the udev rule file path
-UDEV_RULE_FILE="/etc/udev/rules.d/99-can-$DESIRED_NAME.rules"
+# Define the udev rule file path (unique per device via serial)
+UDEV_RULE_FILE="/etc/udev/rules.d/99-can-$RULE_ID.rules"
 
 # Save the udev rule
 echo "# CAN interface rule for $DESIRED_NAME" > "$UDEV_RULE_FILE"
