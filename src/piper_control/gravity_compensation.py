@@ -32,9 +32,11 @@ def _direct_scaling_factors(
   When firmware_version is None (unknown), the old-firmware scaling is applied
   as the safe default to avoid sending 4x stronger torques.
   """
+  # firmware <= 1.8.post2 amplifies J1-3 commands by 4x internally.
+  # https://github.com/agilexrobotics/piper_sdk/blob/master/asserts/Q%26A.MD#32-sdk-to-obtain-motor-feedback-torque
   if (
       firmware_version is not None
-      and firmware_version >= packaging_version.Version("1.8")
+      and firmware_version > packaging_version.Version("1.8.post2")
   ):
     return (1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
   return (0.25, 0.25, 0.25, 1.0, 1.0, 1.0)
