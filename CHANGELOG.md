@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0]
+
+-   Only support direct gravity compensation mode.
+-   Use device serial in udev rule filename to support multiple CAN interfaces.
+-   Fix gravity compensation scaling threshold to match firmware 1.8.post2
+    behavior.
+-   Make `direct_scaling_factors` public.
+
 ## [1.4.0]
 
 -   Add target velocity to MIT control interface.
