@@ -367,16 +367,19 @@ class MitJointPositionController(JointPositionController):
 
   def command_torques(
       self,
-      torques: Sequence[float],
+      torques: Sequence[float | None],
   ) -> None:
     assert len(torques) == 6
 
     for ji, torque in enumerate(torques):
-      if self._joint_flip_map:
-        torque = -torque if self._joint_flip_map[ji] else torque
-      torque = np.clip(torque, -_MIT_TORQUE_LIMITS[ji], _MIT_TORQUE_LIMITS[ji])
+      if torque is not None:
+        if self._joint_flip_map:
+          torque = -torque if self._joint_flip_map[ji] else torque
+        torque = np.clip(
+            torque, -_MIT_TORQUE_LIMITS[ji], _MIT_TORQUE_LIMITS[ji]
+        )
 
-      self._piper.command_joint_torque_mit(ji, torque)
+        self._piper.command_joint_torque_mit(ji, torque)
 
   def _smoothly_move_to_position(
       self,
