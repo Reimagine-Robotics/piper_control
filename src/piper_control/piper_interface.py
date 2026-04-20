@@ -15,6 +15,9 @@ from packaging import version as packaging_version
 DEG_TO_RAD = 3.1415926 / 180.0
 RAD_TO_DEG = 1 / DEG_TO_RAD
 
+# The target reading for j0 when it hits the minimum (clockwise) hard-stop.
+J0_MIN_HARDSTOP = -2.7017
+
 
 # There are different versions of the Piper arm and gripper with slightly
 # different limits. These constants are here for backward compatibility, but
@@ -349,6 +352,7 @@ class PiperInterface:
       can_port: str = "can0",
       piper_arm_type: PiperArmType = PiperArmType.PIPER,
       piper_gripper_type: PiperGripperType = PiperGripperType.V2,
+      j0_calibration_offset: float = 0.0,
   ) -> None:
     """
     Initializes the PiperControl with a specified CAN port.
@@ -359,6 +363,7 @@ class PiperInterface:
     self.can_port = can_port
     self._piper_arm_type = piper_arm_type
     self._piper_gripper_type = piper_gripper_type
+    self._j0_calibration_offset = j0_calibration_offset
 
     self.piper = piper_sdk.C_PiperInterface_V2(can_name=can_port)
     self.piper.ConnectPort()
@@ -377,6 +382,13 @@ class PiperInterface:
   def gripper_effort_max(self) -> float:
     """Returns the maximum gripper effort for the current Piper gripper type."""
     return get_gripper_effort_max(self._piper_gripper_type)
+
+  @property
+  def j0_calibration_offset(self) -> float:
+    return self._j0_calibration_offset
+
+  def set_j0_calibration_offset(self, offset: float) -> None:
+    self._j0_calibration_offset = offset
 
   def set_installation_pos(
       self, installation_pos: ArmInstallationPos = ArmInstallationPos.UPRIGHT
@@ -485,9 +497,13 @@ class PiperInterface:
     yaw = pose.end_pose.RZ_axis * 1e-3 * DEG_TO_RAD
     return [x, y, z, roll, pitch, yaw]
 
-  def get_joint_positions(self) -> list[float]:
+  def get_joint_positions(self, raw: bool = False) -> list[float]:
     """
     Returns the current joint positions as a sequence of floats (radians).
+
+    Args:
+      raw: Whether to apply any calibrated offsets. If set to True, the raw
+        sensor value is returned, otherwise any calibrated offsets are applied.
 
     Returns:
       Sequence[float]: Joint positions in radians.
@@ -503,7 +519,11 @@ class PiperInterface:
     ]
 
     # API reports positions in milli-degrees. Convert to radians.
-    return [pos / 1e3 * DEG_TO_RAD for pos in raw_positions]
+    result = [pos / 1e3 * DEG_TO_RAD for pos in raw_positions]
+    if not raw:
+      result[0] += self._j0_calibration_offset
+
+    return result
 
   def get_joint_velocities(self) -> list[float]:
     """
@@ -745,7 +765,11 @@ class PiperInterface:
         arm_controller,
     )
 
-  def command_joint_positions(self, positions: Sequence[float]) -> None:
+  def command_joint_positions(
+      self,
+      positions: Sequence[float],
+      raw: bool = False,
+  ) -> None:
     """
     Sets the joint positions using JointCtrl.
 
@@ -754,12 +778,17 @@ class PiperInterface:
 
     Args:
       positions (Sequence[float]): A list of joint angles in radians.
+      raw: Whether to apply any calibrated offsets. If set to True, the position
+        command is taken as is, otherwise any calibrated offsets are applied.
     """
 
     joint_angles = []
     joint_limits = get_joint_limits(self._piper_arm_type)
 
     for i, pos in enumerate(positions):
+      if not raw and i == 0:
+        pos -= self._j0_calibration_offset
+
       min_rad, max_rad = (
           joint_limits["min"][i],
           joint_limits["max"][i],
@@ -780,6 +809,7 @@ class PiperInterface:
       kd: float,
       torque_ff: float,
       velocity: float,
+      raw: bool = False,
   ) -> None:
     """
     Commands a joint via MIT control to move to a given angle.
@@ -794,8 +824,13 @@ class PiperInterface:
       kd (float): Derivative gain.
       torque_ff (float): Feedforward torque in Nm.
       velocity (float): Joint velocity in rad/s.
+      raw: Whether to apply any calibrated offsets. If set to True, the position
+        command is taken as is, otherwise any calibrated offsets are applied.
     """
     assert motor_idx >= 0 and motor_idx <= 5
+
+    if not raw and motor_idx == 0:
+      position -= self._j0_calibration_offset
 
     self.piper.JointMitCtrl(
         motor_idx + 1, position, velocity, kp, kd, torque_ff
