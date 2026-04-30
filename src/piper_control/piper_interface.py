@@ -422,14 +422,10 @@ class PiperInterface:
       )
 
   def clear_joint_errors(self, joint: int | None = None) -> None:
-    """
-    Sends a joint-error-clear command to the arm.
-
-    Clearing errors disables the arm; callers that want to keep the arm
-    running afterwards should use piper_init.clear_joint_errors instead.
+    """Sends a clear-error command. Use piper_init.clear_joint_errors instead.
 
     Args:
-      joint: Zero-indexed joint (0-5) to clear. If None, clears all joints.
+      joint: Zero-indexed joint (0-5). If None, clears all joints.
     """
     if joint is not None and not 0 <= joint <= 5:
       raise ValueError(f"Invalid joint index: {joint}")
@@ -438,28 +434,20 @@ class PiperInterface:
 
   @property
   def move_mode(self) -> MoveMode:
-    """Move mode reported by the arm via the 0x2A1 status frame.
+    """Active move mode, read from arm_status.mode_feed (0x2A1 frame).
 
-    Reads `arm_status.mode_feed`, which is the canonical feedback channel
-    (see piper_sdk/demo/detect_arm.py:183 and the official docs in
-    piper_sdk/piper_msgs/msg_v2/feedback/arm_feedback_status.py:56).
-
-    Note: do NOT use piper.GetArmModeCtrl() (the 0x151 frame). On the
-    firmware we run the arm does not echo 0x151 back, so its fields stay
-    at SDK defaults and lie about the actual mode. mode_feed is the only
-    field that actually transitions when the arm changes mode.
+    GetArmModeCtrl() (0x151) is unreliable: arm does not echo it on our
+    firmware, fields stay at SDK defaults. See piper_sdk/demo/detect_arm.py
+    line 183 for canonical usage.
     """
     return MoveMode(self.piper.GetArmStatus().arm_status.mode_feed)
 
   @property
   def arm_controller(self) -> ArmController:
-    """Arm controller inferred from `mode_feed`.
+    """Active arm controller, inferred from move_mode.
 
-    The firmware has no dedicated feedback for arm_controller (mit_mode in
-    the 0x151 frame stays at 0x0, see clear_errors_diagnostic results).
-    But the MIT controller always drives the arm in MoveMode.MIT, while
-    POSITION_VELOCITY uses any other move mode (typically JOINT). So we
-    infer: mode_feed == MIT  ⟹  ArmController.MIT, else POSITION_VELOCITY.
+    No dedicated feedback exists. MIT controller always uses MoveMode.MIT;
+    POSITION_VELOCITY uses any other mode.
     """
     if self.move_mode == MoveMode.MIT:
       return ArmController.MIT
