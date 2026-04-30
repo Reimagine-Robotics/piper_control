@@ -152,6 +152,41 @@ def enable_arm(
   time.sleep(_LONG_WAIT)
 
 
+def clear_joint_errors(
+    piper: pi.PiperInterface,
+    joint: int | None = None,
+    *,
+    timeout_seconds: float = 10.0,
+) -> None:
+  """Clears joint error codes and re-enables the arm.
+
+  Does not power-cycle the arm (unlike reset_arm). Useful after the firmware
+  trips a joint on collision or excessive tracking error.
+
+  Reads the active controller and move mode from `piper.arm_controller` /
+  `piper.move_mode`, which derive from `arm_status.mode_feed` (the only
+  reliable feedback. See PiperInterface.move_mode docstring and
+  experimental/jafar/clear_errors_diagnostic.py for the empirical proof
+  that GetArmModeCtrl() does not work).
+
+  Args:
+    joint: Zero-indexed joint (0-5) to clear. If None, clears all joints.
+  """
+  was_enabled = piper.is_arm_enabled()
+  arm_controller = piper.arm_controller
+  move_mode = piper.move_mode
+  piper.clear_joint_errors(joint)
+  # Only re-enable if arm was enabled before clearing. Otherwise /clear on a
+  # deliberately-disabled arm would silently power it back up (unsafe).
+  if was_enabled:
+    enable_arm(
+        piper,
+        arm_controller=arm_controller,
+        move_mode=move_mode,
+        timeout_seconds=timeout_seconds,
+    )
+
+
 def reset_arm(
     piper: pi.PiperInterface,
     arm_controller: pi.ArmController = pi.ArmController.POSITION_VELOCITY,
