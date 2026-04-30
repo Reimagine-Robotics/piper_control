@@ -421,6 +421,38 @@ class PiperInterface:
           clear_err=0,
       )
 
+  def clear_joint_errors(self, joint: int | None = None) -> None:
+    """Sends a clear-error command. Use piper_init.clear_joint_errors instead.
+
+    Args:
+      joint: Zero-indexed joint (0-5). If None, clears all joints.
+    """
+    if joint is not None and not 0 <= joint <= 5:
+      raise ValueError(f"Invalid joint index: {joint}")
+    joint_num = 7 if joint is None else joint + 1
+    self.piper.JointConfig(joint_num=joint_num, clear_err=0xAE)
+
+  @property
+  def move_mode(self) -> MoveMode:
+    """Active move mode, read from arm_status.mode_feed (0x2A1 frame).
+
+    GetArmModeCtrl() (0x151) is unreliable: arm does not echo it on our
+    firmware, fields stay at SDK defaults. See piper_sdk/demo/detect_arm.py
+    line 183 for canonical usage.
+    """
+    return MoveMode(self.piper.GetArmStatus().arm_status.mode_feed)
+
+  @property
+  def arm_controller(self) -> ArmController:
+    """Active arm controller, inferred from move_mode.
+
+    No dedicated feedback exists. MIT controller always uses MoveMode.MIT;
+    POSITION_VELOCITY uses any other mode.
+    """
+    if self.move_mode == MoveMode.MIT:
+      return ArmController.MIT
+    return ArmController.POSITION_VELOCITY
+
   def set_gripper_zero_position(self) -> None:
     """
     Re-zeros the gripper at its current position.

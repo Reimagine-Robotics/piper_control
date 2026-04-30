@@ -152,6 +152,33 @@ def enable_arm(
   time.sleep(_LONG_WAIT)
 
 
+def clear_joint_errors(
+    piper: pi.PiperInterface,
+    joint: int | None = None,
+    *,
+    timeout_seconds: float = 10.0,
+) -> None:
+  """Clears joint error codes; re-enables only if arm was enabled.
+
+  Lighter than reset_arm (no power cycle). Use after firmware trips a joint
+  on collision or tracking error.
+
+  Args:
+    joint: Zero-indexed joint (0-5). If None, clears all joints.
+  """
+  was_enabled = piper.is_arm_enabled()
+  arm_controller = piper.arm_controller
+  move_mode = piper.move_mode
+  piper.clear_joint_errors(joint)
+  if was_enabled:
+    enable_arm(
+        piper,
+        arm_controller=arm_controller,
+        move_mode=move_mode,
+        timeout_seconds=timeout_seconds,
+    )
+
+
 def reset_arm(
     piper: pi.PiperInterface,
     arm_controller: pi.ArmController = pi.ArmController.POSITION_VELOCITY,
