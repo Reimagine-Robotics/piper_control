@@ -353,17 +353,44 @@ class PiperInterface:
       piper_arm_type: PiperArmType = PiperArmType.PIPER,
       piper_gripper_type: PiperGripperType = PiperGripperType.V2,
       j0_calibration_offset: float = 0.0,
+      joint_calibration_offsets: Sequence[float] | None = None,
   ) -> None:
     """
     Initializes the PiperControl with a specified CAN port.
 
     Args:
       can_port (str): The CAN interface port name (e.g., "can0").
+      j0_calibration_offset: Per-joint calibration offset for joint 0 only.
+        Kept for backward compatibility; equivalent to passing
+        joint_calibration_offsets=[j0_calibration_offset, 0, 0, 0, 0, 0].
+        Mutually exclusive with a non-None joint_calibration_offsets.
+      joint_calibration_offsets: Six per-joint calibration offsets in radians.
+        Added to readbacks via get_joint_positions() and subtracted from
+        commands via command_joint_positions / command_joint_position_mit.
     """
+    if (
+        joint_calibration_offsets is not None
+        and j0_calibration_offset != 0.0
+    ):
+      raise ValueError(
+          "Pass either joint_calibration_offsets or j0_calibration_offset,"
+          " not both."
+      )
+    if joint_calibration_offsets is None:
+      offsets = [0.0] * 6
+    else:
+      if len(joint_calibration_offsets) != 6:
+        raise ValueError(
+            f"joint_calibration_offsets must have 6 values; got"
+            f" {len(joint_calibration_offsets)}."
+        )
+      offsets = [float(v) for v in joint_calibration_offsets]
+    offsets[0] += j0_calibration_offset
+
     self.can_port = can_port
     self._piper_arm_type = piper_arm_type
     self._piper_gripper_type = piper_gripper_type
-    self._j0_calibration_offset = j0_calibration_offset
+    self._joint_calibration_offsets = offsets
 
     self.piper = piper_sdk.C_PiperInterface_V2(can_name=can_port)
     self.piper.ConnectPort()
@@ -384,11 +411,28 @@ class PiperInterface:
     return get_gripper_effort_max(self._piper_gripper_type)
 
   @property
+  def joint_calibration_offsets(self) -> list[float]:
+    """Six per-joint calibration offsets in radians."""
+    return list(self._joint_calibration_offsets)
+
+  def set_joint_calibration_offsets(self, offsets: Sequence[float]) -> None:
+    """Replace all six per-joint calibration offsets.
+
+    Offsets are added to readbacks via get_joint_positions() and subtracted
+    from commands via command_joint_positions and command_joint_position_mit.
+    """
+    if len(offsets) != 6:
+      raise ValueError(
+          f"joint_calibration_offsets must have 6 values; got {len(offsets)}."
+      )
+    self._joint_calibration_offsets = [float(v) for v in offsets]
+
+  @property
   def j0_calibration_offset(self) -> float:
-    return self._j0_calibration_offset
+    return self._joint_calibration_offsets[0]
 
   def set_j0_calibration_offset(self, offset: float) -> None:
-    self._j0_calibration_offset = offset
+    self._joint_calibration_offsets[0] = float(offset)
 
   def set_installation_pos(
       self, installation_pos: ArmInstallationPos = ArmInstallationPos.UPRIGHT
@@ -553,7 +597,9 @@ class PiperInterface:
     # API reports positions in milli-degrees. Convert to radians.
     result = [pos / 1e3 * DEG_TO_RAD for pos in raw_positions]
     if not raw:
-      result[0] += self._j0_calibration_offset
+      result = [
+          r + o for r, o in zip(result, self._joint_calibration_offsets)
+      ]
 
     return result
 
@@ -818,8 +864,8 @@ class PiperInterface:
     joint_limits = get_joint_limits(self._piper_arm_type)
 
     for i, pos in enumerate(positions):
-      if not raw and i == 0:
-        pos -= self._j0_calibration_offset
+      if not raw:
+        pos -= self._joint_calibration_offsets[i]
 
       min_rad, max_rad = (
           joint_limits["min"][i],
@@ -861,8 +907,8 @@ class PiperInterface:
     """
     assert motor_idx >= 0 and motor_idx <= 5
 
-    if not raw and motor_idx == 0:
-      position -= self._j0_calibration_offset
+    if not raw:
+      position -= self._joint_calibration_offsets[motor_idx]
 
     self.piper.JointMitCtrl(
         motor_idx + 1, position, velocity, kp, kd, torque_ff
