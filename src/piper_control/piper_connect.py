@@ -6,9 +6,9 @@ in obvious way when pip installing piper_sdk, and you can't easily invoke them
 from higher-level Python code.
 """
 
+import shutil
 import subprocess
 import time
-import shutil
 
 # ------------------------
 # Public API
@@ -98,33 +98,40 @@ def get_can_adapter_serial(can_port: str) -> str | None:
 # Internal Utility Methods
 # ------------------------
 
+
 def _check_dependencies() -> None:
-    # Detect package manager
-    if shutil.which("pacman"):
-        query_cmd = lambda pkg: ["pacman", "-Q", pkg]
-        install_cmd = "sudo pacman -S"
-    elif shutil.which("dpkg"):
-        query_cmd = lambda pkg: ["dpkg", "-s", pkg]
-        install_cmd = "sudo apt install"
-    else:
-        raise RuntimeError("Unsupported package manager. \
-                           Please ensure ethtool and can-utils \
-                           are installed manually.")
+  # Detect package manager
+  def _pacman_query(pkg: str) -> list[str]:
+    return ["pacman", "-Q", pkg]
 
+  def _dpkg_query(pkg: str) -> list[str]:
+    return ["dpkg", "-s", pkg]
 
-    for pkg in ["ethtool", "can-utils"]:
-        try:
-            subprocess.run(
-                query_cmd(pkg),
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-              )
-        except subprocess.CalledProcessError as exc:
-            raise RuntimeError(
-                f"Missing dependency: {pkg}. \
+  if shutil.which("pacman"):
+    query_cmd = _pacman_query
+    install_cmd = "sudo pacman -S"
+  elif shutil.which("dpkg"):
+    query_cmd = _dpkg_query
+    install_cmd = "sudo apt install"
+  else:
+    raise RuntimeError(
+        "Unsupported package manager. "
+        "Please ensure ethtool and can-utils are installed manually."
+    )
+
+  for pkg in ["ethtool", "can-utils"]:
+    try:
+      subprocess.run(
+          query_cmd(pkg),
+          check=True,
+          stdout=subprocess.DEVNULL,
+          stderr=subprocess.DEVNULL,
+      )
+    except subprocess.CalledProcessError as exc:
+      raise RuntimeError(
+          f"Missing dependency: {pkg}. \
                   Please install with `{install_cmd} {pkg}`."
-            ) from exc
+      ) from exc
 
 
 def _get_can_interfaces() -> list[tuple[str, str]]:
