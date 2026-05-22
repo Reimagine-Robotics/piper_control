@@ -8,6 +8,7 @@ from higher-level Python code.
 
 import subprocess
 import time
+import shutil
 
 # ------------------------
 # Public API
@@ -97,16 +98,33 @@ def get_can_adapter_serial(can_port: str) -> str | None:
 # Internal Utility Methods
 # ------------------------
 
-
 def _check_dependencies() -> None:
-  for pkg in ["ethtool", "can-utils"]:
-    try:
-      subprocess.run(["dpkg", "-s", pkg], check=True, stdout=subprocess.DEVNULL)
-    except subprocess.CalledProcessError as exc:
-      raise RuntimeError(
-          f"Missing dependency: {pkg}. Please install with `sudo apt install "
-          f"{pkg}`."
-      ) from exc
+    # Detect package manager
+    if shutil.which("pacman"):
+        query_cmd = lambda pkg: ["pacman", "-Q", pkg]
+        install_cmd = "sudo pacman -S"
+    elif shutil.which("dpkg"):
+        query_cmd = lambda pkg: ["dpkg", "-s", pkg]
+        install_cmd = "sudo apt install"
+    else:
+        raise RuntimeError("Unsupported package manager. \
+                           Please ensure ethtool and can-utils \
+                           are installed manually.")
+
+
+    for pkg in ["ethtool", "can-utils"]:
+        try:
+            subprocess.run(
+                query_cmd(pkg),
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+              )
+        except subprocess.CalledProcessError as exc:
+            raise RuntimeError(
+                f"Missing dependency: {pkg}. \
+                  Please install with `{install_cmd} {pkg}`."
+            ) from exc
 
 
 def _get_can_interfaces() -> list[tuple[str, str]]:
