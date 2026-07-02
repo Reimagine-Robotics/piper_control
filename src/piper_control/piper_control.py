@@ -99,7 +99,7 @@ _POST_V1_7_3_MIT_JOINT_FLIP = [False, False, False, False, False, False]
 # Sending a magnitude greater than this saturates the field and, worse, causes
 # the torque *sign* to flip (integer overflow / wraparound in the encoding), so
 # we must hard-clip every commanded torque to this limit before sending.
-_MIT_TORQUE_LIMITS = [8.0, 8.0, 8.0, 8.0, 8.0, 8.0]
+MIT_TORQUE_LIMITS = [8.0, 8.0, 8.0, 8.0, 8.0, 8.0]
 
 
 # Allowed gains range allowed for the Mit controller.
@@ -251,7 +251,7 @@ class MitJointPositionController(JointPositionController):
     # (commands are sent at _CONTROL_RATE). Instance state, not module state, so
     # concurrent controllers (e.g. two arms) don't suppress each other's
     # safety-critical overflow warnings.
-    self._torque_clip_warned = [False] * len(_MIT_TORQUE_LIMITS)
+    self._torque_clip_warned = [False] * len(MIT_TORQUE_LIMITS)
 
     if isinstance(kp_gains, float):
       self._kp_gains = (kp_gains,) * 6
@@ -293,7 +293,7 @@ class MitJointPositionController(JointPositionController):
   def _clip_torque(self, torque: float, joint_idx: int) -> float:
     """Clips a commanded torque to the CAN limit, warning if it was exceeded."""
 
-    limit = _MIT_TORQUE_LIMITS[joint_idx]
+    limit = MIT_TORQUE_LIMITS[joint_idx]
     clipped = float(np.clip(torque, -limit, limit))
     if clipped != torque:
       if not self._torque_clip_warned[joint_idx]:

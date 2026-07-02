@@ -26,13 +26,13 @@ def _make_controller():
   controller = pc.MitJointPositionController.__new__(
       pc.MitJointPositionController
   )
-  controller._torque_clip_warned = [False] * len(pc._MIT_TORQUE_LIMITS)
+  controller._torque_clip_warned = [False] * len(pc.MIT_TORQUE_LIMITS)
   return controller
 
 
 def test_can_limit_is_8nm():
   # The CAN field saturates at 8 Nm; a higher limit would let the sign flip.
-  assert pc._MIT_TORQUE_LIMITS == [8.0] * 6
+  assert pc.MIT_TORQUE_LIMITS == [8.0] * 6
 
 
 def test_in_range_torque_is_unchanged():
