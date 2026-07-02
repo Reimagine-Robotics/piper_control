@@ -290,6 +290,27 @@ class MitJointPositionController(JointPositionController):
         move_mode=pi.MoveMode.MIT,
     )
 
+  def _validate_torques_finite(self, torques: Sequence[float | None]) -> None:
+    """Rejects a torque command containing any NaN before anything is sent.
+
+    A NaN torque cannot be meaningfully clipped and would cause undefined
+    hardware behaviour. Because commands are dispatched joint-by-joint, a NaN
+    discovered mid-loop would leave earlier joints already commanded and the arm
+    in a partially-commanded state. Validating the whole vector up front gives
+    all-or-nothing semantics: either every joint is commanded or none is.
+
+    ``None`` entries are skipped (they mean "leave this joint uncommanded").
+    """
+    bad = [
+        ji
+        for ji, t in enumerate(torques)
+        if t is not None and np.isnan(t)
+    ]
+    if bad:
+      raise ValueError(
+          f"Commanded torque for joint(s) {bad} is NaN; refusing to send any."
+      )
+
   def _clip_torque(self, torque: float, joint_idx: int) -> float:
     """Clips a commanded torque to the CAN limit, warning if it was exceeded.
 
@@ -299,15 +320,10 @@ class MitJointPositionController(JointPositionController):
     limit; it is not repeated every tick, and re-arms once the joint returns
     within limits.
 
-    A NaN torque cannot be meaningfully clipped and would cause undefined
-    hardware behaviour, so it is rejected outright rather than routed through
-    the clip path (where ``NaN != NaN`` would masquerade as an ordinary clip).
+    Callers must reject NaN inputs up front (see ``_validate_torques_finite``);
+    a NaN reaching this method would slip through the clip path as an ordinary
+    clip because ``NaN != NaN``.
     """
-    if np.isnan(torque):
-      raise ValueError(
-          f"Commanded torque for joint {joint_idx} is NaN; refusing to send."
-      )
-
     limit = _MIT_TORQUE_LIMITS[joint_idx]
     clipped = float(np.clip(torque, -limit, limit))
     if clipped != torque:
@@ -364,6 +380,10 @@ class MitJointPositionController(JointPositionController):
     assert len(torques_ff) == 6
     assert len(velocities) == 6
 
+    # Validate the whole torque vector before commanding any joint, so a NaN in
+    # one joint doesn't leave earlier joints already commanded (all-or-nothing).
+    self._validate_torques_finite(torques_ff)
+
     for ji, pos in enumerate(target):
 
       # Clip the position to limits so that we don't send invalid commands.
@@ -417,6 +437,10 @@ class MitJointPositionController(JointPositionController):
       torques: Sequence[float | None],
   ) -> None:
     assert len(torques) == 6
+
+    # Validate the whole torque vector before commanding any joint, so a NaN in
+    # one joint doesn't leave earlier joints already commanded (all-or-nothing).
+    self._validate_torques_finite(torques)
 
     for ji, torque in enumerate(torques):
       if torque is not None:
