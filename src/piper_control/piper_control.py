@@ -9,6 +9,7 @@ Piper robot. They provide two main benefits:
 
 import abc
 import dataclasses
+import logging as log
 import time
 from collections.abc import Sequence
 
@@ -94,7 +95,42 @@ _MIT_FLIP_FIX_VERSION = packaging_version.Version("1.7-3")
 _PRE_V1_7_3_MIT_JOINT_FLIP = [True, True, False, True, False, True]
 _POST_V1_7_3_MIT_JOINT_FLIP = [False, False, False, False, False, False]
 
-_MIT_TORQUE_LIMITS = [10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
+# The MIT-mode torque command is packed into a CAN message with a limited range.
+# Sending a magnitude greater than this saturates the field and, worse, causes
+# the torque *sign* to flip (integer overflow / wraparound in the encoding), so
+# we must hard-clip every commanded torque to this limit before sending.
+_MIT_TORQUE_LIMITS = [8.0, 8.0, 8.0, 8.0, 8.0, 8.0]
+
+# Tracks which joints are currently in a clipped state, so we warn only once per
+# excursion rather than every control tick (commands are sent at _CONTROL_RATE).
+_torque_clip_warned = [False] * len(_MIT_TORQUE_LIMITS)
+
+
+def _clip_torque(torque: float, joint_idx: int) -> float:
+  """Clips a commanded torque to the CAN limit, warning if it was exceeded.
+
+  Torques beyond ``_MIT_TORQUE_LIMITS`` overflow the CAN message field and cause
+  the torque sign to flip, so clipping here is a safety requirement, not just a
+  nicety. A single warning is logged when a joint first exceeds the limit; it is
+  not repeated every tick, and re-arms once the joint returns within limits.
+  """
+  limit = _MIT_TORQUE_LIMITS[joint_idx]
+  clipped = float(np.clip(torque, -limit, limit))
+  if clipped != torque:
+    if not _torque_clip_warned[joint_idx]:
+      log.warning(
+          "Commanded torque %.3f Nm for joint %d exceeds CAN limit of %.3f Nm; "
+          "clipping to %.3f Nm. Torques beyond the limit would overflow the "
+          "CAN message and flip sign.",
+          torque,
+          joint_idx,
+          limit,
+          clipped,
+      )
+      _torque_clip_warned[joint_idx] = True
+  else:
+    _torque_clip_warned[joint_idx] = False
+  return clipped
 
 # Allowed gains range allowed for the Mit controller.
 _MAX_KP_GAIN = 100.0
@@ -329,9 +365,7 @@ class MitJointPositionController(JointPositionController):
       torque_ff = torques_ff[ji]
       if self._joint_flip_map:
         torque_ff = -torque_ff if self._joint_flip_map[ji] else torque_ff
-      torque_ff = np.clip(
-          torque_ff, -_MIT_TORQUE_LIMITS[ji], _MIT_TORQUE_LIMITS[ji]
-      )
+      torque_ff = _clip_torque(torque_ff, ji)
 
       velocity = velocities[ji]
       if self._joint_flip_map:
@@ -375,9 +409,7 @@ class MitJointPositionController(JointPositionController):
       if torque is not None:
         if self._joint_flip_map:
           torque = -torque if self._joint_flip_map[ji] else torque
-        torque = np.clip(
-            torque, -_MIT_TORQUE_LIMITS[ji], _MIT_TORQUE_LIMITS[ji]
-        )
+        torque = _clip_torque(torque, ji)
 
         self._piper.command_joint_torque_mit(ji, torque)
 
