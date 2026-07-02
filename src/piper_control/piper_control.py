@@ -291,8 +291,8 @@ class MitJointPositionController(JointPositionController):
     )
 
   def _clip_torque(self, torque: float, joint_idx: int) -> float:
-    """Clips a commanded torque to the CAN limit, warning if it was exceeded.
-    """
+    """Clips a commanded torque to the CAN limit, warning if it was exceeded."""
+    
     limit = _MIT_TORQUE_LIMITS[joint_idx]
     clipped = float(np.clip(torque, -limit, limit))
     if clipped != torque:
