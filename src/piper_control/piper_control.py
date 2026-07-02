@@ -101,36 +101,6 @@ _POST_V1_7_3_MIT_JOINT_FLIP = [False, False, False, False, False, False]
 # we must hard-clip every commanded torque to this limit before sending.
 _MIT_TORQUE_LIMITS = [8.0, 8.0, 8.0, 8.0, 8.0, 8.0]
 
-# Tracks which joints are currently in a clipped state, so we warn only once per
-# excursion rather than every control tick (commands are sent at _CONTROL_RATE).
-_torque_clip_warned = [False] * len(_MIT_TORQUE_LIMITS)
-
-
-def _clip_torque(torque: float, joint_idx: int) -> float:
-  """Clips a commanded torque to the CAN limit, warning if it was exceeded.
-
-  Torques beyond ``_MIT_TORQUE_LIMITS`` overflow the CAN message field and cause
-  the torque sign to flip, so clipping here is a safety requirement, not just a
-  nicety. A single warning is logged when a joint first exceeds the limit; it is
-  not repeated every tick, and re-arms once the joint returns within limits.
-  """
-  limit = _MIT_TORQUE_LIMITS[joint_idx]
-  clipped = float(np.clip(torque, -limit, limit))
-  if clipped != torque:
-    if not _torque_clip_warned[joint_idx]:
-      log.warning(
-          "Commanded torque %.3f Nm for joint %d exceeds CAN limit of %.3f Nm; "
-          "clipping to %.3f Nm. Torques beyond the limit would overflow the "
-          "CAN message and flip sign.",
-          torque,
-          joint_idx,
-          limit,
-          clipped,
-      )
-      _torque_clip_warned[joint_idx] = True
-  else:
-    _torque_clip_warned[joint_idx] = False
-  return clipped
 
 # Allowed gains range allowed for the Mit controller.
 _MAX_KP_GAIN = 100.0
@@ -276,6 +246,13 @@ class MitJointPositionController(JointPositionController):
 
     super().__init__(piper)
 
+    # Per-joint latch tracking whether a joint is currently in a clipped state,
+    # so we warn only once per excursion rather than every control tick
+    # (commands are sent at _CONTROL_RATE). Instance state, not module state, so
+    # concurrent controllers (e.g. two arms) don't suppress each other's
+    # safety-critical overflow warnings.
+    self._torque_clip_warned = [False] * len(_MIT_TORQUE_LIMITS)
+
     if isinstance(kp_gains, float):
       self._kp_gains = (kp_gains,) * 6
     else:
@@ -312,6 +289,42 @@ class MitJointPositionController(JointPositionController):
         arm_controller=pi.ArmController.MIT,
         move_mode=pi.MoveMode.MIT,
     )
+
+  def _clip_torque(self, torque: float, joint_idx: int) -> float:
+    """Clips a commanded torque to the CAN limit, warning if it was exceeded.
+
+    Torques beyond ``_MIT_TORQUE_LIMITS`` overflow the CAN message field and
+    cause the torque sign to flip, so clipping here is a safety requirement, not
+    just a nicety. A single warning is logged when a joint first exceeds the
+    limit; it is not repeated every tick, and re-arms once the joint returns
+    within limits.
+
+    A NaN torque cannot be meaningfully clipped and would cause undefined
+    hardware behaviour, so it is rejected outright rather than routed through
+    the clip path (where ``NaN != NaN`` would masquerade as an ordinary clip).
+    """
+    if np.isnan(torque):
+      raise ValueError(
+          f"Commanded torque for joint {joint_idx} is NaN; refusing to send."
+      )
+
+    limit = _MIT_TORQUE_LIMITS[joint_idx]
+    clipped = float(np.clip(torque, -limit, limit))
+    if clipped != torque:
+      if not self._torque_clip_warned[joint_idx]:
+        log.warning(
+            "Commanded torque %.3f Nm for joint %d exceeds CAN limit of %.3f "
+            "Nm; clipping to %.3f Nm. Torques beyond the limit would overflow "
+            "the CAN message and flip sign.",
+            torque,
+            joint_idx,
+            limit,
+            clipped,
+        )
+        self._torque_clip_warned[joint_idx] = True
+    else:
+      self._torque_clip_warned[joint_idx] = False
+    return clipped
 
   def stop(self) -> None:
     # Move to the rest position if one is specified.
@@ -365,7 +378,7 @@ class MitJointPositionController(JointPositionController):
       torque_ff = torques_ff[ji]
       if self._joint_flip_map:
         torque_ff = -torque_ff if self._joint_flip_map[ji] else torque_ff
-      torque_ff = _clip_torque(torque_ff, ji)
+      torque_ff = self._clip_torque(torque_ff, ji)
 
       velocity = velocities[ji]
       if self._joint_flip_map:
@@ -409,7 +422,7 @@ class MitJointPositionController(JointPositionController):
       if torque is not None:
         if self._joint_flip_map:
           torque = -torque if self._joint_flip_map[ji] else torque
-        torque = _clip_torque(torque, ji)
+        torque = self._clip_torque(torque, ji)
 
         self._piper.command_joint_torque_mit(ji, torque)
 
