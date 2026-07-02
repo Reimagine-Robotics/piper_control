@@ -16,7 +16,6 @@ Run with plugin autoload disabled to avoid unrelated system pytest plugins
 import logging
 
 import pytest
-
 from piper_control import piper_control as pc
 
 
@@ -26,7 +25,9 @@ def _make_controller():
   ``__init__`` queries the arm's firmware over the wire, so we bypass it and set
   only the per-instance warn latch the method reads and writes.
   """
-  controller = pc.MitJointPositionController.__new__(pc.MitJointPositionController)
+  controller = pc.MitJointPositionController.__new__(
+    pc.MitJointPositionController
+  )
   controller._torque_clip_warned = [False] * len(pc._MIT_TORQUE_LIMITS)
   return controller
 
