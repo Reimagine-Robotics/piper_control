@@ -96,7 +96,7 @@ _PRE_V1_7_3_MIT_JOINT_FLIP = [True, True, False, True, False, True]
 _POST_V1_7_3_MIT_JOINT_FLIP = [False, False, False, False, False, False]
 
 # firmware >= S-V1.8-8 widened the MIT torque field to 12-bit (+/-16 Nm) and
-# dropped the CRC nibble. The bundled SDK only packs the 8-bit + CRC frame.
+# dropped the CRC nibble.
 _MIT_12BIT_FRAME_VERSION = packaging_version.Version("1.8.post8")
 
 # Minimum seconds between repeated torque-saturation warnings, per joint.
@@ -109,23 +109,15 @@ def mit_wire_torque_limit(firmware_version: str | None) -> float:
   Firmware < S-V1.8-8 encodes torque in an 8-bit field spanning +/-8 Nm;
   commands are clamped to it, since beyond it the value overflows and wraps
   sign. (On old firmware, which amplifies J1-3 by 4x, this is +/-32 Nm at those
-  joints.) Firmware >= S-V1.8-8 switched to a 12-bit / no-CRC field this driver
-  does not encode, so it is rejected rather than misencoded.
-
-  TODO: add the 12-bit / no-CRC encoder (see pyAgxArm piper v188/v189 driver)
-  and return 16.0 for firmware >= S-V1.8-8 instead of raising.
+  joints.) Firmware >= S-V1.8-8 uses a 12-bit / no-CRC field spanning +/-16 Nm.
   """
   parsed = (
       packaging_version.parse(firmware_version) if firmware_version else None
   )
   if parsed is not None and parsed >= _MIT_12BIT_FRAME_VERSION:
-    raise NotImplementedError(
-        f"Firmware {firmware_version} uses the 12-bit / no-CRC MIT torque "
-        "frame (S-V1.8-8+). This driver only encodes the 8-bit + CRC frame, "
-        "which this firmware misdecodes. Add the 12-bit codec before "
-        "commanding torques on this firmware."
-    )
+    return 16.0
   return 8.0
+
 
 # Allowed gains range allowed for the Mit controller.
 _MAX_KP_GAIN = 100.0
