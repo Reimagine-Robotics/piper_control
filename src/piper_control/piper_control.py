@@ -9,7 +9,7 @@ Piper robot. They provide two main benefits:
 
 import abc
 import dataclasses
-import logging as log
+import logging
 import time
 from collections.abc import Sequence
 
@@ -17,6 +17,8 @@ import numpy as np
 from packaging import version as packaging_version
 
 from piper_control import piper_interface as pi
+
+_LOG = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -306,7 +308,7 @@ class MitJointPositionController(JointPositionController):
       now = time.monotonic()
       elapsed = now - self._last_torque_warn[joint_idx]
       if elapsed >= _TORQUE_WARN_THROTTLE_SECONDS:
-        log.warning(
+        _LOG.warning(
             "joint %d torque %.2f Nm exceeds MIT wire limit +/-%.2f Nm; "
             "clamping",
             joint_idx,
