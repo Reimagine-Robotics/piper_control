@@ -9,6 +9,7 @@ Piper robot. They provide two main benefits:
 
 import abc
 import dataclasses
+import logging
 import time
 from collections.abc import Sequence
 
@@ -16,6 +17,8 @@ import numpy as np
 from packaging import version as packaging_version
 
 from piper_control import piper_interface as pi
+
+_LOG = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -94,7 +97,29 @@ _MIT_FLIP_FIX_VERSION = packaging_version.Version("1.7-3")
 _PRE_V1_7_3_MIT_JOINT_FLIP = [True, True, False, True, False, True]
 _POST_V1_7_3_MIT_JOINT_FLIP = [False, False, False, False, False, False]
 
-_MIT_TORQUE_LIMITS = [10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
+# firmware >= S-V1.8-8 widened the MIT torque field to 12-bit (+/-16 Nm) and
+# dropped the CRC nibble.
+_MIT_12BIT_FRAME_VERSION = packaging_version.Version("1.8.post8")
+
+# Minimum seconds between repeated torque-saturation warnings, per joint.
+_TORQUE_WARN_THROTTLE_SECONDS = 1.0
+
+
+def mit_wire_torque_limit(firmware_version: str | None) -> float:
+  """Return the MIT torque wire limit in Nm for the given firmware.
+
+  Firmware < S-V1.8-8 encodes torque in an 8-bit field spanning +/-8 Nm;
+  commands are clamped to it, since beyond it the value overflows and wraps
+  sign. (On old firmware, which amplifies J1-3 by 4x, this is +/-32 Nm at those
+  joints.) Firmware >= S-V1.8-8 uses a 12-bit / no-CRC field spanning +/-16 Nm.
+  """
+  parsed = (
+      packaging_version.parse(firmware_version) if firmware_version else None
+  )
+  if parsed is not None and parsed >= _MIT_12BIT_FRAME_VERSION:
+    return 16.0
+  return 8.0
+
 
 # Allowed gains range allowed for the Mit controller.
 _MAX_KP_GAIN = 100.0
@@ -271,6 +296,31 @@ class MitJointPositionController(JointPositionController):
           f"Invalid firmware version string: {current_firmware}"
       ) from e
 
+    self._wire_torque_limit = mit_wire_torque_limit(current_firmware)
+    self._last_torque_warn = [float("-inf")] * 6
+
+  def _clamp_wire_torque(self, joint_idx: int, torque: float) -> float:
+    """Clamp a wire-space torque to the MIT field limit, warning on saturation.
+
+    Warnings are throttled per joint to avoid flooding at the control rate.
+    """
+    if abs(torque) > self._wire_torque_limit:
+      now = time.monotonic()
+      elapsed = now - self._last_torque_warn[joint_idx]
+      if elapsed >= _TORQUE_WARN_THROTTLE_SECONDS:
+        _LOG.warning(
+            "joint %d torque %.2f Nm exceeds MIT wire limit +/-%.2f Nm; "
+            "clamping",
+            joint_idx,
+            torque,
+            self._wire_torque_limit,
+        )
+        self._last_torque_warn[joint_idx] = now
+      torque = float(
+          np.clip(torque, -self._wire_torque_limit, self._wire_torque_limit)
+      )
+    return torque
+
   def start(self) -> None:
     self.piper.set_arm_mode(
         arm_controller=pi.ArmController.MIT,
@@ -329,9 +379,7 @@ class MitJointPositionController(JointPositionController):
       torque_ff = torques_ff[ji]
       if self._joint_flip_map:
         torque_ff = -torque_ff if self._joint_flip_map[ji] else torque_ff
-      torque_ff = np.clip(
-          torque_ff, -_MIT_TORQUE_LIMITS[ji], _MIT_TORQUE_LIMITS[ji]
-      )
+      torque_ff = self._clamp_wire_torque(ji, torque_ff)
 
       velocity = velocities[ji]
       if self._joint_flip_map:
@@ -375,9 +423,7 @@ class MitJointPositionController(JointPositionController):
       if torque is not None:
         if self._joint_flip_map:
           torque = -torque if self._joint_flip_map[ji] else torque
-        torque = np.clip(
-            torque, -_MIT_TORQUE_LIMITS[ji], _MIT_TORQUE_LIMITS[ji]
-        )
+        torque = self._clamp_wire_torque(ji, torque)
 
         self._piper.command_joint_torque_mit(ji, torque)
 
