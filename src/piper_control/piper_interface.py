@@ -217,6 +217,12 @@ class MoveMode(enum.IntEnum):
   CIRCULAR = 0x03
   MIT = 0x04
 
+  @classmethod
+  def _missing_(cls, value: object) -> MoveMode | None:
+    if value == 0x06:
+      return cls.MIT
+    return None
+
 
 def validate_move_mode(mode: MoveMode) -> TypeGuard[Literal[0, 1, 2, 3, 4]]:
   """
@@ -611,6 +617,16 @@ class PiperInterface:
 
     return angle, effort
 
+  def _gripper_uses_angle_mode(self) -> bool:
+    gripper_status = self.get_gripper_status()
+    mode = getattr(gripper_status.gripper_state, "mode", "width")
+    return mode == "angle"
+
+  def _gripper_code(self, width_code: int, angle_code: int) -> int:
+    if self._gripper_uses_angle_mode():
+      return angle_code
+    return width_code
+
   def get_motor_errors(self) -> list[bool]:
     """Returns whether each of the 6 motors is in error."""
     arm_msgs = self.piper.GetArmLowSpdInfoMsgs()
@@ -732,8 +748,9 @@ class PiperInterface:
   def enable_gripper(self) -> None:
     gripper_status = self.get_gripper_status()
     raw_angle = gripper_status.gripper_state.grippers_angle
+    gripper_code = self._gripper_code(GripperCode.ENABLE, 0x05)
     # Enable the gripper without moving it to a new angle.
-    self.piper.GripperCtrl(raw_angle, 0, GripperCode.ENABLE, 0)  # type: ignore
+    self.piper.GripperCtrl(raw_angle, 0, gripper_code, 0)
 
   def disable_arm(self) -> None:
     self.piper.DisableArm(7)
@@ -742,7 +759,7 @@ class PiperInterface:
     self.piper.GripperCtrl(
         0,
         0,
-        GripperCode.DISABLE_AND_CLEAR_ERROR,  # type: ignore
+        self._gripper_code(GripperCode.DISABLE_AND_CLEAR_ERROR, 0x06),
         0,
     )
 
@@ -938,7 +955,7 @@ class PiperInterface:
     self.piper.GripperCtrl(
         position_int,
         effort_int,
-        GripperCode.ENABLE,  # type: ignore
+        self._gripper_code(GripperCode.ENABLE, 0x05),
         0,
     )
 
