@@ -469,10 +469,13 @@ class GripperController(abc.ABC):
     self.stop()
 
   def command_open(self) -> None:
-    self.piper.command_gripper(position=self.piper.gripper_angle_max)
+    self.piper.command_gripper(
+        position=self.piper.gripper_angle_max,
+        effort=DEFAULT_GRIPPER_EFFORT,
+    )
 
   def command_close(self) -> None:
-    self.piper.command_gripper(position=0.0)
+    self.piper.command_gripper(position=0.0, effort=DEFAULT_GRIPPER_EFFORT)
 
   def command_position(
       self,

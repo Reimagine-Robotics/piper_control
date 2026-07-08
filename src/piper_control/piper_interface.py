@@ -30,6 +30,7 @@ _JOINT_LIMITS_RAD = {
 }
 _GRIPPER_ANGLE_MAX = 0.07  # 70mm
 _GRIPPER_EFFORT_MAX = 2.0  # 2 Nm
+_GRIPPER_EFFORT_DEFAULT = 1.0
 
 if TYPE_CHECKING:
   JOINT_LIMITS_RAD = _JOINT_LIMITS_RAD
@@ -936,8 +937,8 @@ class PiperInterface:
         Clipped to be between 0.0 and the max gripper angle. If None, the
         position is not updated.
       effort (float | None): The desired effort (force) for the gripper.
-        Clipped to be between 0.0 and the max gripper effort. If None, the
-        effort is not updated.
+        Clipped to be between 0.0 and the max gripper effort. If None and
+        position is provided, the default gripper effort is used.
 
     Returns:
       None
@@ -947,6 +948,8 @@ class PiperInterface:
       gripper_angle_max = get_gripper_angle_max(self._piper_gripper_type)
       position = min(max(position, 0.0), gripper_angle_max)
       position_int = round(position * 1e6)
+      if effort is None:
+        effort = _GRIPPER_EFFORT_DEFAULT
     if effort is not None:
       gripper_effort_max = get_gripper_effort_max(self._piper_gripper_type)
       effort = min(max(effort, 0.0), gripper_effort_max)
