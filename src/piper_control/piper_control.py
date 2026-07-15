@@ -98,36 +98,45 @@ _PRE_V1_7_3_MIT_JOINT_FLIP = [True, True, False, True, False, True]
 _POST_V1_7_3_MIT_JOINT_FLIP = [False, False, False, False, False, False]
 
 # firmware >= S-V1.8-8 widened the MIT torque field to 12-bit (+/-16 Nm) and
-# dropped the CRC nibble. The bundled SDK only packs the 8-bit + CRC frame.
+# dropped the CRC nibble.
 _MIT_12BIT_FRAME_VERSION = packaging_version.Version("1.8.post8")
+# firmware >= S-V1.8-3 dropped the joint gear-ratio scaling that earlier
+# firmware applied to MIT feed-forward torque.
+_MIT_GEAR_RATIO_DROPPED_VERSION = packaging_version.Version("1.8.post3")
+
+# Per-joint MIT torque gear ratios for the base Piper arm. Only firmware
+# <= S-V1.8-2 applies them: there a physical torque is divided by the ratio
+# before the +/-8 Nm wire encoding, so J1-3 (ratio 4) reach +/-32 Nm.
+_PIPER_MIT_GEAR_RATIOS = (4.0, 4.0, 4.0, 1.0, 1.0, 1.0)
 
 # Minimum seconds between repeated torque-saturation warnings, per joint.
 _TORQUE_WARN_THROTTLE_SECONDS = 1.0
 
 
-def mit_wire_torque_limit(firmware_version: str | None) -> float:
-  """Return the MIT torque wire limit in Nm for the given firmware.
+def mit_torque_limits(
+    firmware_version: str | None,
+    gear_ratios: Sequence[float] = _PIPER_MIT_GEAR_RATIOS,
+) -> tuple[list[float], list[float]]:
+  """Return per-joint (physical torque limit Nm, wire divisor) for MIT control.
 
-  Firmware < S-V1.8-8 encodes torque in an 8-bit field spanning +/-8 Nm;
-  commands are clamped to it, since beyond it the value overflows and wraps
-  sign. (On old firmware, which amplifies J1-3 by 4x, this is +/-32 Nm at those
-  joints.) Firmware >= S-V1.8-8 switched to a 12-bit / no-CRC field this driver
-  does not encode, so it is rejected rather than misencoded.
+  AgileX changed the MIT feed-forward torque encoding across firmware:
+    <= S-V1.8-2: 8-bit field; firmware multiplies the wire value by the joint
+      gear ratio, so a physical command is divided by the ratio before encoding
+      into the +/-8 Nm field. J1-3 (ratio 4) therefore reach +/-32 Nm.
+    S-V1.8-3 .. S-V1.8-7: 8-bit field, gear ratio dropped; +/-8 Nm, no division.
+    >= S-V1.8-8: 12-bit / no-CRC field; +/-16 Nm, no division.
 
-  TODO: add the 12-bit / no-CRC encoder (see pyAgxArm piper v188/v189 driver)
-  and return 16.0 for firmware >= S-V1.8-8 instead of raising.
+  Unknown firmware falls back to the gear-ratio regime, which under-commands
+  rather than over-commands torque if the arm turns out to be newer.
   """
   parsed = (
       packaging_version.parse(firmware_version) if firmware_version else None
   )
   if parsed is not None and parsed >= _MIT_12BIT_FRAME_VERSION:
-    raise NotImplementedError(
-        f"Firmware {firmware_version} uses the 12-bit / no-CRC MIT torque "
-        "frame (S-V1.8-8+). This driver only encodes the 8-bit + CRC frame, "
-        "which this firmware misdecodes. Add the 12-bit codec before "
-        "commanding torques on this firmware."
-    )
-  return 8.0
+    return [16.0] * 6, [1.0] * 6
+  if parsed is not None and parsed >= _MIT_GEAR_RATIO_DROPPED_VERSION:
+    return [8.0] * 6, [1.0] * 6
+  return [8.0 * ratio for ratio in gear_ratios], list(gear_ratios)
 
 
 # Allowed gains range allowed for the Mit controller.
@@ -260,6 +269,7 @@ class MitJointPositionController(JointPositionController):
       rest_position: (
           Sequence[float] | None
       ) = ArmOrientations.upright.rest_position,
+      joint_torque_gear_ratios: Sequence[float] = _PIPER_MIT_GEAR_RATIOS,
   ):
     """Controller constructor
 
@@ -270,6 +280,8 @@ class MitJointPositionController(JointPositionController):
       rest_position: An optional joint angles (6) in radians that the robot will
         go to upon stopping. If None is set, then the rest behaviour is not
         executed.
+      joint_torque_gear_ratios: Per-joint MIT torque gear ratios (6), used only
+        on firmware <= S-V1.8-2. Defaults to the base Piper arm ratios.
     """
 
     super().__init__(piper)
@@ -305,30 +317,32 @@ class MitJointPositionController(JointPositionController):
           f"Invalid firmware version string: {current_firmware}"
       ) from e
 
-    self._wire_torque_limit = mit_wire_torque_limit(current_firmware)
+    self._torque_limits, self._torque_wire_divisors = mit_torque_limits(
+        current_firmware, joint_torque_gear_ratios
+    )
     self._last_torque_warn = [float("-inf")] * 6
 
-  def _clamp_wire_torque(self, joint_idx: int, torque: float) -> float:
-    """Clamp a wire-space torque to the MIT field limit, warning on saturation.
+  def _to_wire_torque(self, joint_idx: int, torque: float) -> float:
+    """Clamp a physical joint torque (Nm) and convert it to MIT wire units.
 
-    Warnings are throttled per joint to avoid flooding at the control rate.
+    On firmware that applies the joint gear ratio the physical command is
+    divided by the ratio; on later firmware the divisor is 1. Warnings are
+    throttled per joint to avoid flooding at the control rate.
     """
-    if abs(torque) > self._wire_torque_limit:
+    limit = self._torque_limits[joint_idx]
+    if abs(torque) > limit:
       now = time.monotonic()
       elapsed = now - self._last_torque_warn[joint_idx]
       if elapsed >= _TORQUE_WARN_THROTTLE_SECONDS:
         _LOG.warning(
-            "joint %d torque %.2f Nm exceeds MIT wire limit +/-%.2f Nm; "
-            "clamping",
+            "joint %d torque %.2f Nm exceeds MIT limit +/-%.2f Nm; clamping",
             joint_idx,
             torque,
-            self._wire_torque_limit,
+            limit,
         )
         self._last_torque_warn[joint_idx] = now
-      torque = float(
-          np.clip(torque, -self._wire_torque_limit, self._wire_torque_limit)
-      )
-    return torque
+      torque = float(np.clip(torque, -limit, limit))
+    return torque / self._torque_wire_divisors[joint_idx]
 
   def start(self) -> None:
     self.piper.set_arm_mode(
@@ -388,7 +402,7 @@ class MitJointPositionController(JointPositionController):
       torque_ff = torques_ff[ji]
       if self._joint_flip_map:
         torque_ff = -torque_ff if self._joint_flip_map[ji] else torque_ff
-      torque_ff = self._clamp_wire_torque(ji, torque_ff)
+      torque_ff = self._to_wire_torque(ji, torque_ff)
 
       velocity = velocities[ji]
       if self._joint_flip_map:
@@ -432,7 +446,7 @@ class MitJointPositionController(JointPositionController):
       if torque is not None:
         if self._joint_flip_map:
           torque = -torque if self._joint_flip_map[ji] else torque
-        torque = self._clamp_wire_torque(ji, torque)
+        torque = self._to_wire_torque(ji, torque)
 
         self._piper.command_joint_torque_mit(ji, torque)
 
