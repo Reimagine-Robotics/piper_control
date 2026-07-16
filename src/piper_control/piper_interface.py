@@ -98,6 +98,38 @@ class PiperGripperType(enum.Enum):
   V2 = "V2 10cm gripper"
 
 
+# Per-joint MIT torque coefficients (AgileX pyAgxArm api/constants.py):
+#   k = torque constant (motor current -> torque), b = gear ratio.
+# Feedback decodes joint torque as current * k * b; b also scales commanded
+# feed-forward torque.
+_JOINT_TORQUE_K: dict[PiperArmType, tuple[float, ...]] = {
+    PiperArmType.PIPER: (1.18125, 1.18125, 1.18125, 0.95844, 0.95844, 0.95844),
+    PiperArmType.PIPER_H: (
+        1.18125, 1.65375, 1.18125, 0.95844, 0.95844, 0.95844),
+    PiperArmType.PIPER_L: (
+        1.18125, 1.65375, 1.18125, 0.95844, 0.95844, 0.95844),
+    PiperArmType.PIPER_X: (
+        1.18125, 1.65375, 1.18125, 0.95844, 0.95844, 0.95844),
+}
+_JOINT_TORQUE_B: dict[PiperArmType, tuple[float, ...]] = {
+    PiperArmType.PIPER: (4.0, 4.0, 4.0, 1.0, 1.0, 1.0),
+    PiperArmType.PIPER_H: (4.0, 2.5, 4.0, 1.7, 1.7, 1.0),
+    PiperArmType.PIPER_L: (4.0, 2.5, 4.0, 1.0, 1.0, 1.0),
+    PiperArmType.PIPER_X: (4.0, 2.5, 4.0, 1.2, 0.8, 1.0),
+}
+
+
+def joint_torque_coefficients(
+    arm_type: PiperArmType = PiperArmType.PIPER,
+) -> tuple[tuple[float, ...], tuple[float, ...]]:
+  """Returns per-joint (k, b) MIT torque coefficients for the arm type.
+
+  k = torque constant, b = gear ratio. Joint torque = motor current * k * b;
+  b also scales commanded feed-forward torque. Values from AgileX pyAgxArm.
+  """
+  return _JOINT_TORQUE_K[arm_type], _JOINT_TORQUE_B[arm_type]
+
+
 def get_joint_limits(
     arm_type: PiperArmType = PiperArmType.PIPER,
 ) -> dict[str, list[float]]:
@@ -581,18 +613,26 @@ class PiperInterface:
     """
     Returns the current joint efforts as a sequence of floats.
 
+    Decodes true per-model joint torque as motor current * k * b, where k is the
+    torque constant and b the gear ratio (see joint_torque_coefficients). The
+    SDK's own effort field is current * k with base-piper k and no gear ratio, so
+    it under-reports non-base arms (and omits b even for base piper); we decode
+    from raw current with the per-model coefficients instead.
+
     Returns:
       Sequence[float]: Joint efforts in Nm.
     """
+    k, b = joint_torque_coefficients(self._piper_arm_type)
     arm_msgs = self.piper.GetArmHighSpdInfoMsgs()
-    return [
-        arm_msgs.motor_1.effort / 1e3,
-        arm_msgs.motor_2.effort / 1e3,
-        arm_msgs.motor_3.effort / 1e3,
-        arm_msgs.motor_4.effort / 1e3,
-        arm_msgs.motor_5.effort / 1e3,
-        arm_msgs.motor_6.effort / 1e3,
+    currents = [
+        arm_msgs.motor_1.current,
+        arm_msgs.motor_2.current,
+        arm_msgs.motor_3.current,
+        arm_msgs.motor_4.current,
+        arm_msgs.motor_5.current,
+        arm_msgs.motor_6.current,
     ]
+    return [currents[i] * k[i] * b[i] / 1e3 for i in range(6)]
 
   def get_gripper_state(self) -> tuple[float, float]:
     """

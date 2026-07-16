@@ -10,6 +10,8 @@ import mujoco as mj
 import numpy as np
 from packaging import version as packaging_version
 
+from piper_control import piper_interface
+
 # These are the joint names in the default MuJoCo model for the piper arm.
 DEFAULT_JOINT_NAMES = (
     "joint1",
@@ -23,23 +25,37 @@ DEFAULT_JOINT_NAMES = (
 
 def direct_scaling_factors(
     firmware_version: str | None,
+    arm_type: piper_interface.PiperArmType = piper_interface.PiperArmType.PIPER,
 ) -> tuple[float, ...]:
-  """Return per-joint command scaling factors for the given firmware.
+  """Return per-joint command scaling factors for firmware and arm model.
 
-  Firmware versions older than 1.8 amplify J1-3 commands by 4x internally,
-  so we divide by 4 before sending. Newer firmware does not amplify.
+  Firmware <= S-V1.8-2 multiplies MIT commands by the per-joint gear ratio b
+  internally (4x on J1-3 for base piper), so commands are divided by b before
+  sending. b is per-model (piper / piper_h / piper_l / piper_x).
+
+  Firmware >= S-V1.8-3 normalizes to base-piper gearing, so only the gear ratio
+  relative to base piper needs correcting (identity for base piper, b_base/b for
+  other models). This matches known-good behaviour: base piper uses all 1s and a
+  piper_h needs 1/1.7 on J5 (b_base=1, b_h=1.7).
 
   When firmware_version is None (unknown), the old-firmware scaling is applied
-  as the safe default to avoid sending 4x stronger torques.
+  as the safe default to avoid sending stronger torques.
   """
+  # b = per-joint gear ratios (see piper_interface.joint_torque_coefficients).
+  _, b = piper_interface.joint_torque_coefficients(arm_type)
+  _, b_base = piper_interface.joint_torque_coefficients(
+      piper_interface.PiperArmType.PIPER
+  )
   parsed = (
       packaging_version.parse(firmware_version) if firmware_version else None
   )
-  # firmware <= 1.8.post2 amplifies J1-3 commands by 4x internally.
-  # https://github.com/agilexrobotics/piper_sdk/blob/master/asserts/Q%26A.MD#32-sdk-to-obtain-motor-feedback-torque
   if parsed is not None and parsed > packaging_version.Version("1.8.post2"):
-    return (1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
-  return (0.25, 0.25, 0.25, 1.0, 1.0, 1.0)
+    return tuple(
+        base_ratio / arm_ratio for base_ratio, arm_ratio in zip(b_base, b)
+    )
+  # firmware <= S-V1.8-2 amplifies commands by the gear ratio b; divide it out.
+  # https://github.com/agilexrobotics/piper_sdk/blob/master/asserts/Q%26A.MD#32-sdk-to-obtain-motor-feedback-torque
+  return tuple(1.0 / arm_ratio for arm_ratio in b)
 
 
 class GravityCompensationModel:
@@ -50,12 +66,14 @@ class GravityCompensationModel:
       model_path: str | pathlib.Path | None = None,
       joint_names: Sequence[str] = DEFAULT_JOINT_NAMES,
       firmware_version: str | None = None,
+      arm_type: piper_interface.PiperArmType = piper_interface.PiperArmType.PIPER,
   ):
     model_path = model_path or get_default_model_path()
     self._model = mj.MjModel.from_xml_path(str(model_path))
     self._data = mj.MjData(self._model)
     self._joint_names = tuple(joint_names)
     self._firmware_version = firmware_version
+    self._arm_type = arm_type
     self.gravity_models: dict = {}
 
     joint_indices = [self._model.joint(name).id for name in self._joint_names]
@@ -65,7 +83,7 @@ class GravityCompensationModel:
     self._setup_direct_model()
 
   def _setup_direct_model(self) -> None:
-    scaling = direct_scaling_factors(self._firmware_version)
+    scaling = direct_scaling_factors(self._firmware_version, self._arm_type)
     for joint_idx, joint_name in enumerate(self._joint_names):
       scale = scaling[joint_idx]
       self.gravity_models[joint_name] = lambda x, s=scale: x * s
