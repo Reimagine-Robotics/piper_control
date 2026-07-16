@@ -29,31 +29,33 @@ def direct_scaling_factors(
 ) -> tuple[float, ...]:
   """Return per-joint command scaling factors for firmware and arm model.
 
-  Firmware <= S-V1.8-2 multiplies MIT commands by the per-joint gear ratio b
-  internally (4x on J1-3 for base piper), so commands are divided by b before
-  sending. b is per-model (piper / piper_h / piper_l / piper_x).
+  The gravity model predicts torque in the feedback frame (joint torque =
+  current * k * b). A non-base arm's k*b differs from base piper's and the
+  firmware normalizes commands to base-piper gearing, so a command is off by the
+  per-model ratio base(k*b) / arm(k*b) - e.g. piper_h J2 = 1.143, J5 = 0.588,
+  identity for base piper.
 
-  Firmware >= S-V1.8-3 normalizes to base-piper gearing, so only the gear ratio
-  relative to base piper needs correcting (identity for base piper, b_base/b for
-  other models). This matches known-good behaviour: base piper uses all 1s and a
-  piper_h needs 1/1.7 on J5 (b_base=1, b_h=1.7).
+  Firmware <= S-V1.8-2 additionally amplifies commands by the base gear ratio
+  (4x on J1-3), so that is divided out on top of the per-model ratio.
 
   When firmware_version is None (unknown), the old-firmware scaling is applied
   as the safe default to avoid sending stronger torques.
   """
-  # b = per-joint gear ratios (see pi.joint_torque_coefficients).
-  _, b = pi.joint_torque_coefficients(arm_type)
-  _, b_base = pi.joint_torque_coefficients(pi.PiperArmType.PIPER)
+  k, b = pi.joint_torque_coefficients(arm_type)
+  k_base, b_base = pi.joint_torque_coefficients(pi.PiperArmType.PIPER)
+  # base-piper k*b relative to this arm's k*b (identity for base piper).
+  model_scale = [
+      (base_k * base_b) / (arm_k * arm_b)
+      for base_k, base_b, arm_k, arm_b in zip(k_base, b_base, k, b)
+  ]
   parsed = (
       packaging_version.parse(firmware_version) if firmware_version else None
   )
   if parsed is not None and parsed > packaging_version.Version("1.8.post2"):
-    return tuple(
-        base_ratio / arm_ratio for base_ratio, arm_ratio in zip(b_base, b)
-    )
-  # firmware <= S-V1.8-2 amplifies commands by the gear ratio b; divide it out.
+    return tuple(model_scale)
+  # firmware <= S-V1.8-2 amplifies commands by the base gear ratio; divide out.
   # https://github.com/agilexrobotics/piper_sdk/blob/master/asserts/Q%26A.MD#32-sdk-to-obtain-motor-feedback-torque
-  return tuple(1.0 / arm_ratio for arm_ratio in b)
+  return tuple(scale / base_b for scale, base_b in zip(model_scale, b_base))
 
 
 class GravityCompensationModel:
