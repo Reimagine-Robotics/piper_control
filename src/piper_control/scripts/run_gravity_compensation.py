@@ -34,6 +34,12 @@ def main():
       help="Joint names in the model",
   )
   parser.add_argument("--can-port", default="can0")
+  parser.add_argument(
+      "--arm-type",
+      default=piper_interface.PiperArmType.PIPER.name,
+      choices=[arm_type.name for arm_type in piper_interface.PiperArmType],
+      help="Piper arm model; selects per-joint torque coefficients.",
+  )
   # The original value of 1.0 was tuned when
   # get_joint_velocities() had a ~57x scaling bug (piper_control#68).
   # 1/57 ≈ 0.018 restores the original effective damping.
@@ -44,9 +50,10 @@ def main():
       help="Velocity damping gain for stability",
   )
   args = parser.parse_args()
+  arm_type = piper_interface.PiperArmType[args.arm_type]
 
   log.info("Connecting to Piper robot...")
-  piper = piper_interface.PiperInterface(args.can_port)
+  piper = piper_interface.PiperInterface(args.can_port, piper_arm_type=arm_type)
   piper.show_status()
   firmware_version = piper.get_piper_firmware_version()
   log.info("Firmware version: %s", firmware_version)
@@ -56,6 +63,7 @@ def main():
       model_path=args.model_path,
       joint_names=args.joint_names,
       firmware_version=firmware_version,
+      arm_type=arm_type,
   )
 
   piper.set_installation_pos(piper_interface.ArmInstallationPos.UPRIGHT)
