@@ -10,7 +10,7 @@ import mujoco as mj
 import numpy as np
 from packaging import version as packaging_version
 
-from piper_control import piper_interface
+from piper_control import piper_interface as pi
 
 # These are the joint names in the default MuJoCo model for the piper arm.
 DEFAULT_JOINT_NAMES = (
@@ -25,7 +25,7 @@ DEFAULT_JOINT_NAMES = (
 
 def direct_scaling_factors(
     firmware_version: str | None,
-    arm_type: piper_interface.PiperArmType = piper_interface.PiperArmType.PIPER,
+    arm_type: pi.PiperArmType = pi.PiperArmType.PIPER,
 ) -> tuple[float, ...]:
   """Return per-joint command scaling factors for firmware and arm model.
 
@@ -41,11 +41,9 @@ def direct_scaling_factors(
   When firmware_version is None (unknown), the old-firmware scaling is applied
   as the safe default to avoid sending stronger torques.
   """
-  # b = per-joint gear ratios (see piper_interface.joint_torque_coefficients).
-  _, b = piper_interface.joint_torque_coefficients(arm_type)
-  _, b_base = piper_interface.joint_torque_coefficients(
-      piper_interface.PiperArmType.PIPER
-  )
+  # b = per-joint gear ratios (see pi.joint_torque_coefficients).
+  _, b = pi.joint_torque_coefficients(arm_type)
+  _, b_base = pi.joint_torque_coefficients(pi.PiperArmType.PIPER)
   parsed = (
       packaging_version.parse(firmware_version) if firmware_version else None
   )
@@ -66,7 +64,7 @@ class GravityCompensationModel:
       model_path: str | pathlib.Path | None = None,
       joint_names: Sequence[str] = DEFAULT_JOINT_NAMES,
       firmware_version: str | None = None,
-      arm_type: piper_interface.PiperArmType = piper_interface.PiperArmType.PIPER,
+      arm_type: pi.PiperArmType = pi.PiperArmType.PIPER,
   ):
     model_path = model_path or get_default_model_path()
     self._model = mj.MjModel.from_xml_path(str(model_path))

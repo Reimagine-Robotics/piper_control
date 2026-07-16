@@ -633,9 +633,9 @@ class PiperInterface:
 
     Decodes true per-model joint torque as motor current * k * b, where k is the
     torque constant and b the gear ratio (see joint_torque_coefficients). The
-    SDK's own effort field is current * k with base-piper k and no gear ratio, so
-    it under-reports non-base arms (and omits b even for base piper); we decode
-    from raw current with the per-model coefficients instead.
+    SDK's own effort field uses base-piper k and no gear ratio b, so it
+    under-reports non-base arms; we decode from raw current with the per-model
+    coefficients instead.
 
     Returns:
       Sequence[float]: Joint efforts in Nm.
