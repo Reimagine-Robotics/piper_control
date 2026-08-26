@@ -29,7 +29,7 @@ _JOINT_LIMITS_RAD = {
     "max": [2.687, 3.403, 0.0, 1.850, 1.309, 1.745],
 }
 _GRIPPER_ANGLE_MAX = 0.07  # 70mm
-_GRIPPER_EFFORT_MAX = 2.0  # 2 Nm
+_GRIPPER_EFFORT_MAX = 3.0  # 3 Nm
 
 if TYPE_CHECKING:
   JOINT_LIMITS_RAD = _JOINT_LIMITS_RAD
@@ -212,9 +212,9 @@ def get_gripper_effort_max(
     float: The maximum gripper effort in Nm.
   """
   if gripper_type == PiperGripperType.V1:
-    return 2.0
+    return _GRIPPER_EFFORT_MAX
   elif gripper_type == PiperGripperType.V2:
-    return 2.0
+    return _GRIPPER_EFFORT_MAX
   else:
     raise ValueError(f"Unknown Piper gripper type: {gripper_type}")
 
