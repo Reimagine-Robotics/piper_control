@@ -29,7 +29,7 @@ _JOINT_LIMITS_RAD = {
     "max": [2.687, 3.403, 0.0, 1.850, 1.309, 1.745],
 }
 _GRIPPER_ANGLE_MAX = 0.07  # 70mm
-_GRIPPER_EFFORT_MAX = 3.0  # 3 Nm
+_GRIPPER_EFFORT_MAX = 5.0  # piper_sdk command limit
 
 if TYPE_CHECKING:
   JOINT_LIMITS_RAD = _JOINT_LIMITS_RAD
