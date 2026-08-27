@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+-   `disable_arm` returns once the joint motors have actually switched off
+    rather than once the arm reports `STANDBY`. The motors cut out ~730ms after
+    the reset, so it previously returned while they were still powered, and a
+    caller enabling the arm inside that window saw it as powered, reported
+    success, and then had the motors drop out underneath it. It now blocks for
+    ~0.9s rather than ~0.1s, which the default 10s `timeout_seconds`
+    accommodates comfortably; only a caller overriding that below ~1s would
+    now time out.
+
 ## [1.5.0]
 
 -   Only support direct gravity compensation mode.

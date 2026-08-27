@@ -12,6 +12,14 @@ from piper_control import piper_interface as pi
 _SHORT_WAIT = 0.1
 _LONG_WAIT = 0.5
 
+# Minimum gap between resets, comfortably past the motors-off delay below:
+# re-sending while the motors are still cutting out restarts the wait.
+_MIN_RESET_INTERVAL_SEC = 2.0
+
+# The six motor frames are cached separately, so hold the reading rather than
+# trusting a single poll.
+_MOTORS_OFF_CONFIRM_SEC = 0.2
+
 
 def _create_timeout(
     seconds: float,
@@ -82,6 +90,16 @@ def reset_gripper(
   enable_gripper(piper, timeout_seconds=timeout_seconds)
 
 
+def _is_arm_off(piper: pi.PiperInterface) -> bool:
+  """Whether the arm is in a clean, powered-down state right now."""
+  return (
+      piper.control_mode == pi.ControlMode.STANDBY
+      and piper.arm_status == pi.ArmStatus.NORMAL
+      and piper.teach_status == pi.TeachStatus.OFF
+      and not piper.is_arm_enabled()
+  )
+
+
 def disable_arm(
     piper: pi.PiperInterface,
     *,
@@ -90,22 +108,29 @@ def disable_arm(
   """
   Disables the arm.
 
+  Returns once the joint motors have actually switched off, not merely once the
+  arm reports STANDBY: the arm reports STANDBY within ~20ms of the reset but its
+  motors only cut out 722-730ms later (measured across 20 resets).
+
   WARNING: This powers down the arm and it will drop if not supported.
   """
   timeout_trigger = _create_timeout(timeout_seconds, "disable_arm")
+  off_since: float | None = None
+  last_reset = 0.0
   while True:
-    piper.set_emergency_stop(pi.EmergencyStop.RESUME)
-    time.sleep(_SHORT_WAIT)
-
-    if (
-        piper.control_mode == pi.ControlMode.STANDBY
-        and piper.arm_status == pi.ArmStatus.NORMAL
-        and piper.teach_status == pi.TeachStatus.OFF
-    ):
-      break
+    if _is_arm_off(piper):
+      if off_since is None:
+        off_since = time.time()
+      elif time.time() - off_since >= _MOTORS_OFF_CONFIRM_SEC:
+        return
+    else:
+      off_since = None
+      if time.time() - last_reset >= _MIN_RESET_INTERVAL_SEC:
+        piper.set_emergency_stop(pi.EmergencyStop.RESUME)
+        last_reset = time.time()
 
     timeout_trigger()
-    time.sleep(_LONG_WAIT)
+    time.sleep(_SHORT_WAIT)
 
 
 def enable_arm(
