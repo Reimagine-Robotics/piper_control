@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file.
     ~0.9s rather than ~0.1s, which the default 10s `timeout_seconds`
     accommodates comfortably; only a caller overriding that below ~1s would
     now time out.
+-   `piper-generate-udev-rule` matches on the adapter's CAN channel id when the
+    device reports no USB serial. The PEAK PCAN-USB ships with its serial
+    EEPROM unprogrammed, so the script previously refused to generate a rule
+    for it. Adapters that do report a serial keep the same rule and the same
+    rule filename as before.
 
 ## [1.5.0]
 

@@ -111,34 +111,63 @@ VENDOR=$(udevadm info -p "$DEVICE_PATH" -q property | grep ID_VENDOR_ID | cut -d
 PRODUCT=$(udevadm info -p "$DEVICE_PATH" -q property | grep ID_MODEL_ID | cut -d= -f2)
 SERIAL=$(udevadm info -p "$DEVICE_PATH" -q property | grep ID_SERIAL_SHORT | cut -d= -f2)
 
+# Not every USB-CAN adapter reports a serial. The PEAK PCAN-USB ships with its
+# serial EEPROM unprogrammed, so ID_SERIAL_SHORT is empty. Fall back to the CAN
+# channel id, held in the adapter's own flash and therefore stable across ports.
+CHANNEL_ID_FILE="/sys/class/net/$CAN_INTERFACE/peak_usb/can_channel_id"
+CHANNEL_ID=""
+if [ -r "$CHANNEL_ID_FILE" ]; then
+    CHANNEL_ID=$(cat "$CHANNEL_ID_FILE")
+fi
+
 info "Detected device information:"
 echo "  Interface: $CAN_INTERFACE"
 echo "  Vendor ID: $VENDOR"
 echo "  Product ID: $PRODUCT"
-echo "  Serial: $SERIAL"
+echo "  Serial: ${SERIAL:-<none>}"
+echo "  CAN channel id: ${CHANNEL_ID:-<none>}"
 echo ""
 
-# Validate that we have all required device identifiers
-if [ -z "$VENDOR" ] || [ -z "$PRODUCT" ] || [ -z "$SERIAL" ]; then
-    error "Could not detect all required identifiers for device $CAN_INTERFACE:
+# Vendor and product are needed by the serial and channel-id matches.
+if [ -z "$VENDOR" ] || [ -z "$PRODUCT" ]; then
+    error "Could not detect USB vendor and product for device $CAN_INTERFACE:
   Vendor ID: ${VENDOR:-NOT FOUND}
-  Product ID: ${PRODUCT:-NOT FOUND}
-  Serial: ${SERIAL:-NOT FOUND}"
+  Product ID: ${PRODUCT:-NOT FOUND}"
 fi
 
-# Generate a unique rule identifier from the serial for the udev rule filename
-SERIAL_SUFFIX=$(echo "$SERIAL" | tr -cd 'a-zA-Z0-9' | tr '[:upper:]' '[:lower:]')
-RULE_ID="${DESIRED_NAME}-${SERIAL_SUFFIX}"
+# Pick the most stable identifier the adapter offers.
+if [ -n "$SERIAL" ]; then
+    info "Matching on vendor, product and serial"
+    MATCH="ATTRS{idVendor}==\"$VENDOR\", ATTRS{idProduct}==\"$PRODUCT\", ATTRS{serial}==\"$SERIAL\""
+    RULE_SUFFIX="$SERIAL"
+elif [ -n "$CHANNEL_ID" ]; then
+    info "No USB serial; matching on vendor, product and CAN channel id"
+    warning "This rule is pinned to channel id $CHANNEL_ID, so program the id
+  before generating the rule, not after. PEAK CAN adapters ship set to
+  00000001, so give each one a distinct id and then re-run this script:
+    sudo ip link set $CAN_INTERFACE down
+    sudo ethtool -E $CAN_INTERFACE magic 0x${VENDOR}${PRODUCT} offset 0 value 0x02
+    sudo ip link set $CAN_INTERFACE up
+  The link must be down or the write fails with 'Device or resource busy'."
+    MATCH="ATTRS{idVendor}==\"$VENDOR\", ATTRS{idProduct}==\"$PRODUCT\", ATTR{peak_usb/can_channel_id}==\"$CHANNEL_ID\""
+    RULE_SUFFIX="ch$CHANNEL_ID"
+else
+    error "Device $CAN_INTERFACE reports no serial and no CAN channel id to
+  match on. Write the rule by hand."
+fi
+
+# Generate a unique rule identifier for the udev rule filename
+RULE_SUFFIX=$(echo "$RULE_SUFFIX" | tr -cd 'a-zA-Z0-9' | tr '[:upper:]' '[:lower:]')
+RULE_ID="${DESIRED_NAME}-${RULE_SUFFIX}"
 
 # Generate udev rule content with conditional NAME attribute
-info "Creating rule with vendor, product, and serial for unique identification"
 if [ "$RENAME_INTERFACE" = true ]; then
-    UDEV_RULE="SUBSYSTEM==\"net\", ATTRS{idVendor}==\"$VENDOR\", ATTRS{idProduct}==\"$PRODUCT\", ATTRS{serial}==\"$SERIAL\", ACTION==\"add\", NAME=\"$DESIRED_NAME\", RUN+=\"/bin/sh -c 'ip link set $DESIRED_NAME down; ip link set $DESIRED_NAME type can bitrate $BITRATE; ip link set $DESIRED_NAME up'\""
+    UDEV_RULE="SUBSYSTEM==\"net\", $MATCH, ACTION==\"add\", NAME=\"$DESIRED_NAME\", RUN+=\"/bin/sh -c 'ip link set $DESIRED_NAME down; ip link set $DESIRED_NAME type can bitrate $BITRATE; ip link set $DESIRED_NAME up'\""
 else
-    UDEV_RULE="SUBSYSTEM==\"net\", ATTRS{idVendor}==\"$VENDOR\", ATTRS{idProduct}==\"$PRODUCT\", ATTRS{serial}==\"$SERIAL\", ACTION==\"add\", RUN+=\"/bin/sh -c 'ip link set \$env{INTERFACE} down; ip link set \$env{INTERFACE} type can bitrate $BITRATE; ip link set \$env{INTERFACE} up'\""
+    UDEV_RULE="SUBSYSTEM==\"net\", $MATCH, ACTION==\"add\", RUN+=\"/bin/sh -c 'ip link set \$env{INTERFACE} down; ip link set \$env{INTERFACE} type can bitrate $BITRATE; ip link set \$env{INTERFACE} up'\""
 fi
 
-# Define the udev rule file path (unique per device via serial)
+# Define the udev rule file path (unique per device via its identifier)
 UDEV_RULE_FILE="/etc/udev/rules.d/99-can-$RULE_ID.rules"
 
 # Save the udev rule
