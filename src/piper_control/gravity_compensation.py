@@ -59,18 +59,21 @@ def direct_scaling_factors(
 
 
 class GravityCompensationModel:
-  """Predicts gravity compensation torques using MuJoCo + learned residual."""
+  """Predicts gravity compensation torques using MuJoCo + learned residual.
+
+  The compiled model is read-only here and may be shared with other consumers;
+  each instance owns its ``MjData``.
+  """
 
   def __init__(
       self,
-      model_path: str | pathlib.Path | None = None,
+      model: mj.MjModel,
       joint_names: Sequence[str] = DEFAULT_JOINT_NAMES,
       firmware_version: str | None = None,
       arm_type: pi.PiperArmType = pi.PiperArmType.PIPER,
   ):
-    model_path = model_path or get_default_model_path()
-    self._model = mj.MjModel.from_xml_path(str(model_path))
-    self._data = mj.MjData(self._model)
+    self._model = model
+    self._data = mj.MjData(model)
     self._joint_names = tuple(joint_names)
     self._firmware_version = firmware_version
     self._arm_type = arm_type
@@ -81,6 +84,23 @@ class GravityCompensationModel:
     self.qvel_indices = self._model.jnt_dofadr[joint_indices]
 
     self._setup_direct_model()
+
+  @classmethod
+  def from_xml_path(
+      cls,
+      model_path: str | pathlib.Path | None = None,
+      joint_names: Sequence[str] = DEFAULT_JOINT_NAMES,
+      firmware_version: str | None = None,
+      arm_type: pi.PiperArmType = pi.PiperArmType.PIPER,
+  ) -> "GravityCompensationModel":
+    """Compile the model from MJCF; ``None`` selects the bundled piper model."""
+    model_path = model_path or get_default_model_path()
+    return cls(
+        mj.MjModel.from_xml_path(str(model_path)),
+        joint_names=joint_names,
+        firmware_version=firmware_version,
+        arm_type=arm_type,
+    )
 
   def _setup_direct_model(self) -> None:
     scaling = direct_scaling_factors(self._firmware_version, self._arm_type)

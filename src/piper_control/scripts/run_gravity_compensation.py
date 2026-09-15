@@ -59,8 +59,8 @@ def main():
   log.info("Firmware version: %s", firmware_version)
 
   log.info("Loading gravity compensation model...")
-  grav_model = GravityCompensationModel(
-      model_path=args.model_path,
+  grav_model = GravityCompensationModel.from_xml_path(
+      args.model_path,
       joint_names=args.joint_names,
       firmware_version=firmware_version,
       arm_type=arm_type,
