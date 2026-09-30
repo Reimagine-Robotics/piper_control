@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+-   `GravityCompensationModel` takes a compiled `mujoco.MjModel`, so callers
+    that resolve their model in memory (for example by applying calibration
+    through `MjSpec`) no longer need an XML file on disk. Loading from MJCF
+    moved to `GravityCompensationModel.from_xml_path(...)`, which still
+    defaults to the bundled piper model.
+
 -   `disable_arm` returns once the joint motors have actually switched off
     rather than once the arm reports `STANDBY`. The motors cut out ~730ms after
     the reset, so it previously returned while they were still powered, and a

@@ -181,9 +181,7 @@ def main():
   if args.gravity:
     try:
       log.info("Loading gravity compensation model...")
-      gravity_model = GravityCompensationModel(
-          model_path=model_path,
-      )
+      gravity_model = GravityCompensationModel.from_xml_path(model_path)
       log.info("Gravity compensation enabled.")
     except Exception as e:  # pylint: disable=broad-except
       log.warning(f"Could not load gravity model: {e}")
