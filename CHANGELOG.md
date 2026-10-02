@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+-   `PiperInterface` holds software calibration offsets on every joint,
+    replacing the J0-only offset: `set_calibration_offsets`,
+    `clear_calibration_offsets`, `calibration_offsets` and `is_calibrated`.
+    An offset is a joint's raw reading at its true 0 rad, so positions read
+    and commanded without `raw=True` are `raw - offset`. The
+    `j0_calibration_offset` constructor argument, property and setter are
+    removed, as is `J0_MIN_HARDSTOP`, and the offset's sign is reversed from
+    the J0 one.
+    `command_joint_positions` now clips to the joint limits before applying
+    offsets, so the limits hold in the calibrated frame.
 -   `disable_arm` returns once the joint motors have actually switched off
     rather than once the arm reports `STANDBY`. The motors cut out ~730ms after
     the reset, so it previously returned while they were still powered, and a

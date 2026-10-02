@@ -15,9 +15,6 @@ from packaging import version as packaging_version
 DEG_TO_RAD = 3.1415926 / 180.0
 RAD_TO_DEG = 1 / DEG_TO_RAD
 
-# The target reading for j0 when it hits the minimum (clockwise) hard-stop.
-J0_MIN_HARDSTOP = -2.7017
-
 
 # There are different versions of the Piper arm and gripper with slightly
 # different limits. These constants are here for backward compatibility, but
@@ -402,7 +399,6 @@ class PiperInterface:
       can_port: str = "can0",
       piper_arm_type: PiperArmType = PiperArmType.PIPER,
       piper_gripper_type: PiperGripperType = PiperGripperType.V2,
-      j0_calibration_offset: float = 0.0,
   ) -> None:
     """
     Initializes the PiperControl with a specified CAN port.
@@ -413,7 +409,7 @@ class PiperInterface:
     self.can_port = can_port
     self._piper_arm_type = piper_arm_type
     self._piper_gripper_type = piper_gripper_type
-    self._j0_calibration_offset = j0_calibration_offset
+    self._calibration_offsets: list[float] | None = None
 
     self.piper = piper_sdk.C_PiperInterface_V2(can_name=can_port)
     self.piper.ConnectPort()
@@ -434,11 +430,35 @@ class PiperInterface:
     return get_gripper_effort_max(self._piper_gripper_type)
 
   @property
-  def j0_calibration_offset(self) -> float:
-    return self._j0_calibration_offset
+  def is_calibrated(self) -> bool:
+    """Whether calibration offsets are set."""
+    return self._calibration_offsets is not None
 
-  def set_j0_calibration_offset(self, offset: float) -> None:
-    self._j0_calibration_offset = offset
+  @property
+  def calibration_offsets(self) -> list[float] | None:
+    """Each joint's raw reading at its true 0 rad, or None if not calibrated."""
+    if self._calibration_offsets is None:
+      return None
+    return list(self._calibration_offsets)
+
+  def set_calibration_offsets(self, offsets: Sequence[float]) -> None:
+    """Sets software calibration offsets on every joint.
+
+    A calibration offset is a joint's raw reading at its true 0 rad. Joint
+    positions read and commanded without `raw=True` are then in the calibrated
+    frame: calibrated = raw - offset. The arm's firmware is not changed.
+
+    Args:
+      offsets (Sequence[float]): One offset per joint, in radians.
+    """
+    num_joints = len(self.joint_limits["min"])
+    if len(offsets) != num_joints:
+      raise ValueError(f"Expected {num_joints} offsets, got {offsets}")
+    self._calibration_offsets = [float(offset) for offset in offsets]
+
+  def clear_calibration_offsets(self) -> None:
+    """Clears the calibration offsets, so positions are raw again."""
+    self._calibration_offsets = None
 
   def set_installation_pos(
       self, installation_pos: ArmInstallationPos = ArmInstallationPos.UPRIGHT
@@ -602,8 +622,11 @@ class PiperInterface:
 
     # API reports positions in milli-degrees. Convert to radians.
     result = [pos / 1e3 * DEG_TO_RAD for pos in raw_positions]
-    if not raw:
-      result[0] += self._j0_calibration_offset
+    if not raw and self._calibration_offsets is not None:
+      result = [
+          pos - offset
+          for pos, offset in zip(result, self._calibration_offsets, strict=True)
+      ]
 
     return result
 
@@ -876,14 +899,14 @@ class PiperInterface:
     joint_limits = get_joint_limits(self._piper_arm_type)
 
     for i, pos in enumerate(positions):
-      if not raw and i == 0:
-        pos -= self._j0_calibration_offset
-
+      # Limits are in the calibrated frame, so clip before shifting to raw.
       min_rad, max_rad = (
           joint_limits["min"][i],
           joint_limits["max"][i],
       )
       clipped_pos = min(max(pos, min_rad), max_rad)
+      if not raw and self._calibration_offsets is not None:
+        clipped_pos += self._calibration_offsets[i]
       pos_deg = clipped_pos * RAD_TO_DEG
       joint_angle = round(pos_deg * 1e3)  # Convert to millidegrees
       joint_angles.append(joint_angle)
@@ -919,8 +942,8 @@ class PiperInterface:
     """
     assert motor_idx >= 0 and motor_idx <= 5
 
-    if not raw and motor_idx == 0:
-      position -= self._j0_calibration_offset
+    if not raw and self._calibration_offsets is not None:
+      position += self._calibration_offsets[motor_idx]
 
     self.piper.JointMitCtrl(
         motor_idx + 1, position, velocity, kp, kd, torque_ff
